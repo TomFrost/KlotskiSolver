@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klotski Builder & Solver UI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <h1>Klotski Builder & Solver</h1>
+      <div class="header__actions">
+        <button id="btn-clear" title="Remove all pieces">Clear</button>
+        <button id="btn-reset" title="Reset to state when Solve pressed">Reset</button>
+        <button id="btn-solve" class="primary">Solve</button>
+      </div>
+    </header>
+
+    <div class="app__content">
+      <aside class="sidebar">
+        <div class="panel">
+          <h2>Board</h2>
+          <div class="field">
+            <label>Columns</label>
+            <input id="cols" type="number" min="3" max="8" value="4" />
+          </div>
+          <div class="field">
+            <label>Rows</label>
+            <input id="rows" type="number" min="4" max="10" value="5" />
+          </div>
+          <div class="field">
+            <label>Goal top-left (x, y)</label>
+            <div class="row">
+              <input id="goal-x" type="number" min="0" value="1" />
+              <input id="goal-y" type="number" min="0" value="3" />
+            </div>
+            <small>Goal size fixed at 2×2</small>
+          </div>
+          <button id="btn-apply-board">Apply</button>
+        </div>
+
+        <div class="panel">
+          <h2>Pieces</h2>
+          <div id="palette" class="palette" title="Drag a piece onto the board">
+            <div class="palette__item" data-type="2x2" draggable="true" title="2×2 (goal)">
+              <span>2×2</span>
+            </div>
+            <div class="palette__item" data-type="2x1" draggable="true" title="2×1">
+              <span>2×1</span>
+            </div>
+            <div class="palette__item" data-type="1x2" draggable="true" title="1×2">
+              <span>1×2</span>
+            </div>
+            <div class="palette__item" data-type="1x1" draggable="true" title="1×1">
+              <span>1×1</span>
+            </div>
+          </div>
+          <button id="btn-delete" disabled>Delete Selected</button>
+        </div>
+
+        <div class="panel">
+          <h2>Puzzles</h2>
+          <div class="field">
+            <label>Name</label>
+            <input id="puzzle-name" type="text" placeholder="My puzzle" />
+          </div>
+          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <button id="btn-save-puzzle">Save</button>
+            <button id="btn-load-puzzle" disabled>Load</button>
+          </div>
+          <div class="field">
+            <label>Saved</label>
+            <select id="puzzle-list" size="6" style="width:100%;"></select>
+          </div>
+          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <button id="btn-delete-puzzle" disabled>Delete</button>
+            <button id="btn-share-puzzle">Share Link</button>
+          </div>
+          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <button id="btn-export-json">Export JSON</button>
+            <label class="import-label" style="display:inline-block; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 8px; text-align:center; cursor:pointer;">
+              <input id="file-import" type="file" accept="application/json" style="display:none;" />
+              Import JSON
+            </label>
+          </div>
+          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+            <button id="btn-set-default">Set Default</button>
+            <button id="btn-clear-default">Clear Default</button>
+          </div>
+          <div class="field">
+            <label>Default on refresh</label>
+            <input id="default-display" type="text" disabled placeholder="(none)" />
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Animation</h2>
+          <div class="field">
+            <label>Speed (ms/step)</label>
+            <input id="speed" type="range" min="50" max="1000" value="300" />
+            <div class="speed-value"><span id="speed-value">300</span> ms</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Help</h2>
+          <ul class="help">
+            <li>Drag from palette to add a piece.</li>
+            <li>Drag pieces on the board to move them.</li>
+            <li>Pieces snap to grid; moves are blocked by collisions.</li>
+            <li>Press Solve to run your algorithm in <code>user-solver.js</code>.</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="board-wrapper">
+          <canvas id="board" width="320" height="400" aria-label="Klotski board" role="img"></canvas>
+        </div>
+        <div class="status" id="status"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="board.js"></script>
+  <script src="render.js"></script>
+  <script src="animate.js"></script>
+  <script src="storage.js"></script>
+  <script src="main.js"></script>
+  <script src="user-solver.js"></script>
+</body>
+</html>
