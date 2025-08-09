@@ -136,35 +136,91 @@ speedRange.addEventListener('input', () => {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
 
-  // Palette drag-and-drop onto canvas
+  // Palette drag-and-drop onto canvas (with canvas ghost)
   const palette = document.getElementById('palette');
   let dragType = null;
-  Array.from(palette.querySelectorAll('[draggable="true"]')).forEach(el => {
-    el.addEventListener('dragstart', (e) => {
-      dragType = el.dataset.type;
-      e.dataTransfer?.setData('text/plain', dragType);
+  let paletteDragging = false;
+  let paletteGhost = null; // {x,y,w,h}
+
+  // Replace native HTML5 DnD with pointer-based drag for palette
+  Array.from(palette.querySelectorAll('.palette__item')).forEach(el => {
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const type = el.dataset.type;
+      if (!type) return;
+      dragType = type;
+      paletteDragging = true;
+      el.classList.add('dragging');
+
+      // Build a small cursor-following preview
+      let cursorPreview = document.createElement('div');
+      cursorPreview.className = 'drag-cursor';
+      const inner = document.createElement('div');
+      inner.className = 'piece-mini piece-mini--' + dragType;
+      const rect = document.createElement('div');
+      rect.className = 'piece-mini__rect';
+      inner.appendChild(rect);
+      cursorPreview.appendChild(inner);
+      document.body.appendChild(cursorPreview);
+
+      const onMove = (ev) => {
+        if (!paletteDragging) return;
+        cursorPreview.style.left = (ev.clientX + 12) + 'px';
+        cursorPreview.style.top = (ev.clientY + 12) + 'px';
+        // When moving over canvas, show a snapping ghost; otherwise clear
+        const rectc = canvas.getBoundingClientRect();
+        const inside = ev.clientX >= rectc.left && ev.clientX <= rectc.right && ev.clientY >= rectc.top && ev.clientY <= rectc.bottom;
+        if (inside) {
+          const px = ev.clientX - rectc.left; const py = ev.clientY - rectc.top;
+          const size = BoardModel.typeToSize(dragType);
+          const grid = renderer.pixelToGrid(px, py);
+          const candidate = { x: grid.x, y: grid.y, w: size.w, h: size.h };
+          if (model.inBounds(candidate) && !model.collidesAny(candidate)) {
+            paletteGhost = candidate;
+          } else { paletteGhost = null; }
+          renderer.draw(model.selectedId, paletteGhost);
+        } else {
+          if (paletteGhost) { paletteGhost = null; renderer.draw(model.selectedId); }
+        }
+      };
+
+      const onUp = (ev) => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        el.classList.remove('dragging');
+        cursorPreview.remove(); cursorPreview = null;
+
+        if (paletteDragging) {
+          const rectc = canvas.getBoundingClientRect();
+          const inside = ev.clientX >= rectc.left && ev.clientX <= rectc.right && ev.clientY >= rectc.top && ev.clientY <= rectc.bottom;
+          if (inside) {
+            const px = ev.clientX - rectc.left; const py = ev.clientY - rectc.top;
+            const grid = renderer.pixelToGrid(px, py);
+            const piece = model.createPiece(dragType, grid.x, grid.y);
+            const ok = model.tryAddPiece(piece);
+            if (!ok) setStatus('Cannot place piece here');
+            else {
+              setStatus(`Added ${piece.type} as ${piece.id}`);
+              model.selectedId = piece.id; btnDelete.disabled = false;
+            }
+          }
+        }
+        paletteGhost = null;
+        paletteDragging = false;
+        dragType = null;
+        renderer.draw(model.selectedId);
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
     });
   });
 
-  canvas.addEventListener('dragover', (e) => { e.preventDefault(); });
-  canvas.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const px = e.clientX - rect.left; const py = e.clientY - rect.top;
-    const { x, y } = renderer.pixelToGrid(px, py);
-    if (!dragType) dragType = e.dataTransfer?.getData('text/plain') || null;
-    if (!dragType) return;
-    const piece = model.createPiece(dragType, x, y);
-    const ok = model.tryAddPiece(piece);
-    if (!ok) {
-      setStatus('Cannot place piece here');
-    } else {
-      setStatus(`Added ${piece.type} as ${piece.id}`);
-      model.selectedId = piece.id;
-      btnDelete.disabled = false;
-      renderer.draw(model.selectedId);
-    }
-    dragType = null;
+  // Remove old HTML5 drag listeners if any
+
+  // Remove any residual HTML5 drag handlers
+  ['dragover','dragleave','drop'].forEach(type => {
+    canvas.addEventListener(type, (e) => { if (paletteDragging) e.preventDefault(); }, { passive: false });
   });
 
   // Delete selected
