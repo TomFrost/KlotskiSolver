@@ -311,15 +311,54 @@ input[type="range"] {
 
 .playback-controls {
   display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1.25rem 0.9375rem; /* 20px top/bottom, 15px left/right */
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem; /* More padding for better spacing */
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   width: 360px; /* Match board wrapper width exactly */
   box-sizing: border-box;
+}
+
+.playback-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 260px;
+  padding: 0.75rem 1rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+}
+
+.speed-control label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  min-width: fit-content;
+}
+
+.speed-control input[type="range"] {
+  flex: 1;
+  margin: 0;
+}
+
+.speed-control .speed-value {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+  min-width: fit-content;
+  text-align: right;
 }
 
 .playback-controls button {
@@ -359,6 +398,18 @@ input[type="range"] {
   transform: none;
   box-shadow: none;
   background: #1e293b;
+}
+
+/* Blue styling for play button when puzzle not solved */
+.playback-controls button.solve-mode {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.playback-controls button.solve-mode:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 /* Help section */

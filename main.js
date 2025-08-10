@@ -6,7 +6,7 @@
 
   const canvas = document.getElementById('board');
   const statusEl = document.getElementById('status');
-  const btnSolve = document.getElementById('btn-solve');
+
   const btnReset = document.getElementById('btn-reset');
   const btnClear = document.getElementById('btn-clear');
   const btnDelete = document.getElementById('btn-delete');
@@ -23,6 +23,9 @@
 
   // Animation player instance
   let animationPlayer = null;
+
+  // Track if puzzle has been solved
+  let puzzleIsSolved = false;
 
   // Puzzles UI
   const saveBtn = document.getElementById('btn-save-puzzle');
@@ -75,9 +78,19 @@
     if (!animationPlayer) {
       btnRewind.disabled = true;
       btnStepBack.disabled = true;
-      btnPlayPause.disabled = true;
+      btnPlayPause.disabled = false; // Keep play button enabled for solving
       btnStepForward.disabled = true;
       btnJumpEnd.disabled = true;
+
+      // Set play button to blue if puzzle hasn't been solved
+      if (!puzzleIsSolved) {
+        btnPlayPause.classList.add('solve-mode');
+        btnPlayPause.title = 'Solve puzzle';
+      } else {
+        btnPlayPause.classList.remove('solve-mode');
+        btnPlayPause.title = 'Play/Pause';
+      }
+
       disablePlaybackControls();
       return;
     }
@@ -99,6 +112,9 @@
     // Update play/pause button text
     btnPlayPause.textContent = isPlaying ? '⏸' : '▶';
     btnPlayPause.title = isPlaying ? 'Pause' : 'Play';
+
+    // Remove solve mode styling when we have an animation player
+    btnPlayPause.classList.remove('solve-mode');
 
     enablePlaybackControls();
   }
@@ -190,6 +206,10 @@ speedRange.addEventListener('input', () => {
         setStatus('');
         hasUnsavedChanges = true;
         updateSaveButton();
+        // Reset puzzle solved state when pieces are moved
+        puzzleIsSolved = false;
+        animationPlayer = null;
+        updatePlaybackButtons();
       }
     }
     dragState = null;
@@ -268,6 +288,10 @@ speedRange.addEventListener('input', () => {
               model.selectedId = piece.id; btnDelete.disabled = false;
               hasUnsavedChanges = true;
               updateSaveButton();
+              // Reset puzzle solved state when pieces are added
+              puzzleIsSolved = false;
+              animationPlayer = null;
+              updatePlaybackButtons();
             }
           }
         }
@@ -298,6 +322,10 @@ speedRange.addEventListener('input', () => {
       setStatus('Piece deleted');
       hasUnsavedChanges = true;
       updateSaveButton();
+      // Reset puzzle solved state when pieces are deleted
+      puzzleIsSolved = false;
+      animationPlayer = null;
+      updatePlaybackButtons();
     }
     model.selectedId = null;
     btnDelete.disabled = true;
@@ -312,6 +340,8 @@ speedRange.addEventListener('input', () => {
     btnReset.disabled = true; // Disable Reset when clearing
     hasUnsavedChanges = true;
     updateSaveButton();
+    // Reset puzzle solved state
+    puzzleIsSolved = false;
     // Disable playback controls when clearing
     animationPlayer = null;
     updatePlaybackButtons();
@@ -323,6 +353,8 @@ speedRange.addEventListener('input', () => {
     setStatus('Reset to saved state');
     btnDelete.disabled = !!model.selectedId;
     btnReset.disabled = true; // Disable Reset after using it
+    // Reset puzzle solved state
+    puzzleIsSolved = false;
     // Disable playback controls when resetting
     animationPlayer = null;
     updatePlaybackButtons();
@@ -353,6 +385,8 @@ speedRange.addEventListener('input', () => {
   function setFromState(state) {
     model.loadState(state);
     btnReset.disabled = true; // Disable Reset when loading a new state
+    // Reset puzzle solved state
+    puzzleIsSolved = false;
     // Disable playback controls when loading a new state
     animationPlayer = null;
     updatePlaybackButtons();
@@ -582,7 +616,13 @@ speedRange.addEventListener('input', () => {
     }
   });
 
-  btnPlayPause.addEventListener('click', () => {
+  btnPlayPause.addEventListener('click', async () => {
+    // If no animation player and puzzle not solved, trigger solve
+    if (!animationPlayer && !puzzleIsSolved) {
+      await solvePuzzle();
+      return;
+    }
+
     if (!animationPlayer) return;
 
     if (animationPlayer.isPlaying && !animationPlayer.isPaused) {
@@ -611,8 +651,8 @@ speedRange.addEventListener('input', () => {
     }
   });
 
-  // Solve
-  btnSolve.addEventListener('click', async () => {
+  // Solve function
+  async function solvePuzzle() {
     let solveSuccessful = false;
     try {
       setStatus('Preparing state...');
@@ -662,6 +702,9 @@ speedRange.addEventListener('input', () => {
 
       console.log('Animation player created with', moves.length, 'moves');
 
+      // Mark puzzle as solved
+      puzzleIsSolved = true;
+
       // Enable playback controls and start auto-play
       updatePlaybackButtons();
       animationPlayer.play();
@@ -671,12 +714,13 @@ speedRange.addEventListener('input', () => {
       console.error(err);
       setStatus('Error: ' + (err?.message || String(err)));
     } finally {
-      btnSolve.disabled = false; btnClear.disabled = false; btnDelete.disabled = !model.selectedId;
+      btnClear.disabled = false;
+      btnDelete.disabled = !model.selectedId;
       // Only enable Reset if the solve was successful
       if (solveSuccessful) {
         btnReset.disabled = false;
       }
       renderer.draw(model.selectedId);
     }
-  });
+  }
 })();

@@ -15,7 +15,7 @@
         <button id="btn-reset" title="Reset to state when Solve pressed">Reset</button>
         <button id="btn-save-puzzle" title="Save current puzzle" disabled>Save</button>
         <button id="btn-share-puzzle" title="Share puzzle link">Share</button>
-        <button id="btn-solve" class="primary">Solve</button>
+
       </div>
     </header>
 
@@ -83,15 +83,7 @@
           </div>
         </section>
 
-        <!-- Animation Control Panel -->
-        <section class="panel">
-          <h2>Animation</h2>
-          <div class="field">
-            <label for="speed">Speed (ms/step)</label>
-            <input id="speed" type="range" min="50" max="1000" value="300" />
-            <div class="speed-value"><span id="speed-value">300</span> ms</div>
-          </div>
-        </section>
+
 
         <!-- Help Panel -->
         <section class="panel">
@@ -100,7 +92,7 @@
             <li>Drag from palette to add a piece.</li>
             <li>Drag pieces on the board to move them.</li>
             <li>Pieces snap to grid; moves are blocked by collisions.</li>
-            <li>Press Solve to run your algorithm in <code>user-solver.js</code>.</li>
+            <li>Press Play to run your algorithm in <code>user-solver.js</code>.</li>
           </ul>
         </section>
       </aside>
@@ -110,11 +102,18 @@
           <canvas id="board" width="320" height="400" aria-label="Klotski board" role="img"></canvas>
         </div>
         <div class="playback-controls" id="playback-controls">
-          <button id="btn-rewind" title="Rewind to start" disabled>⏮</button>
-          <button id="btn-step-back" title="Step backward" disabled>⏴</button>
-          <button id="btn-play-pause" title="Play/Pause" disabled>▶</button>
-          <button id="btn-step-forward" title="Step forward" disabled>⏵</button>
-          <button id="btn-jump-end" title="Jump to end" disabled>⏭</button>
+          <div class="playback-buttons">
+            <button id="btn-rewind" title="Rewind to start" disabled>⏮</button>
+            <button id="btn-step-back" title="Step backward" disabled>⏴</button>
+            <button id="btn-play-pause" title="Play/Pause" disabled>▶</button>
+            <button id="btn-step-forward" title="Step forward" disabled>⏵</button>
+            <button id="btn-jump-end" title="Jump to end" disabled>⏭</button>
+          </div>
+          <div class="speed-control">
+            <label for="speed">Speed</label>
+            <input id="speed" type="range" min="50" max="1000" value="300" />
+            <div class="speed-value"><span id="speed-value">300</span> ms</div>
+          </div>
         </div>
         <div class="status" id="status"></div>
       </main>
