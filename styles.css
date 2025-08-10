@@ -390,10 +390,15 @@ input[type="range"] {
   margin-bottom: 0.75rem;
 }
 
-.puzzle-saved-actions {
+.puzzle-saved-actions,
+.puzzle-default-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+}
+
+.puzzle-default-actions {
+  margin-top: 0.75rem;
 }
 
 .puzzle-io-row {

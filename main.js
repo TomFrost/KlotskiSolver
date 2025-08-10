@@ -27,6 +27,8 @@
   const exportBtn = document.getElementById('btn-export-json');
   const importInput = document.getElementById('file-import');
   const shareBtn = document.getElementById('btn-share-puzzle');
+  const setDefaultBtn = document.getElementById('btn-set-default');
+  const clearDefaultBtn = document.getElementById('btn-clear-default');
 
   // Modal elements
   const saveModal = document.getElementById('save-modal');
@@ -291,6 +293,12 @@ speedRange.addEventListener('input', () => {
     });
     loadBtn.disabled = !listEl.value;
     deleteBtn.disabled = !listEl.value;
+
+    // Update default buttons
+    const selectedName = listEl.value;
+    const isDefault = selectedName === defaultName;
+    setDefaultBtn.disabled = !selectedName || isDefault;
+    clearDefaultBtn.disabled = !selectedName || !isDefault;
   }
 
   function setFromState(state) {
@@ -366,27 +374,33 @@ speedRange.addEventListener('input', () => {
     }
   });
 
-  listEl.addEventListener('change', () => {
+    listEl.addEventListener('change', () => {
     loadBtn.disabled = !listEl.value;
     deleteBtn.disabled = !listEl.value;
+
+    // Update default buttons when selection changes
+    const selectedName = listEl.value;
+    const defaultName = window.Klotski.Storage.getDefaultName();
+    const isDefault = selectedName === defaultName;
+    setDefaultBtn.disabled = !selectedName || isDefault;
+    clearDefaultBtn.disabled = !selectedName || !isDefault;
   });
 
-  // Right-click to set/clear default
-  listEl.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+  // Set default button
+  setDefaultBtn.addEventListener('click', () => {
     const name = listEl.value;
     if (!name) return;
+    window.Klotski.Storage.setDefaultName(name);
+    setStatus(`Set "${name}" as default`);
+    refreshList();
+  });
 
-    const defaultName = window.Klotski.Storage.getDefaultName();
-    if (defaultName === name) {
-      // Clear default
-      window.Klotski.Storage.clearDefaultName();
-      setStatus(`Removed "${name}" as default`);
-    } else {
-      // Set as default
-      window.Klotski.Storage.setDefaultName(name);
-      setStatus(`Set "${name}" as default`);
-    }
+  // Clear default button
+  clearDefaultBtn.addEventListener('click', () => {
+    const name = listEl.value;
+    if (!name) return;
+    window.Klotski.Storage.clearDefaultName();
+    setStatus(`Removed "${name}" as default`);
     refreshList();
   });
 
