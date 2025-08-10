@@ -9,18 +9,23 @@
 <body>
   <div class="app">
     <header class="app__header">
-      <h1>Klotski Builder & Solver</h1>
+      <div class="header__left">
+        <button id="btn-menu-toggle" class="menu-toggle" aria-label="Toggle menu">
+          <span class="hamburger"></span>
+        </button>
+        <h1>Klotski Builder & Solver</h1>
+      </div>
       <div class="header__actions">
         <button id="btn-clear" title="Remove all pieces">Clear</button>
         <button id="btn-reset" title="Reset to state when Solve pressed">Reset</button>
         <button id="btn-save-puzzle" title="Save current puzzle" disabled>Save</button>
         <button id="btn-share-puzzle" title="Share puzzle link">Share</button>
-
       </div>
     </header>
 
     <div class="app__content">
-      <aside class="sidebar">
+      <div class="sidebar-overlay" id="sidebar-overlay"></div>
+      <aside class="sidebar" id="sidebar">
         <!-- Piece Palette Panel -->
         <section class="panel">
           <h2>Pieces</h2>

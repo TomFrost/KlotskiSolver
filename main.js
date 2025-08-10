@@ -7,6 +7,11 @@
   const canvas = document.getElementById('board');
   const statusEl = document.getElementById('status');
 
+  // Mobile menu elements
+  const menuToggle = document.getElementById('btn-menu-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+
   const btnReset = document.getElementById('btn-reset');
   const btnClear = document.getElementById('btn-clear');
   const btnDelete = document.getElementById('btn-delete');
@@ -49,6 +54,12 @@
   let currentLoadedPuzzle = null;
   let hasUnsavedChanges = false;
 
+  // Mobile piece placement state
+  let mobilePiecePlacementMode = null; // { type: '2x2', ghost: {...} }
+
+  // Track delete mode state
+  let isInDeleteMode = false;
+
   const model = new BoardModel({ cols: 4, rows: 5, goalX: 1, goalY: 3 });
   const renderer = new BoardRenderer(canvas, model);
 
@@ -64,6 +75,117 @@
   }
 
   function setStatus(text) { statusEl.textContent = text || ''; }
+
+  // Mobile menu functionality
+  function toggleMobileMenu() {
+    const isOpen = sidebar.classList.contains('open');
+    if (isOpen) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
+  }
+
+  function openMobileMenu() {
+    sidebar.classList.add('open');
+    sidebarOverlay.classList.add('visible');
+    menuToggle.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent body scroll when menu is open
+  }
+
+  function closeMobileMenu() {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('visible');
+    menuToggle.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // Mobile menu event listeners
+  if (menuToggle) {
+    menuToggle.addEventListener('click', toggleMobileMenu);
+  }
+
+  if (sidebarOverlay) {
+    sidebarOverlay.addEventListener('click', closeMobileMenu);
+  }
+
+  // Mobile piece placement functions
+  function enterMobilePiecePlacement(pieceType) {
+    mobilePiecePlacementMode = { type: pieceType };
+    closeMobileMenu();
+    setStatus(`Tap the board to place ${pieceType} piece (or press Escape to cancel)`);
+    canvas.classList.add('mobile-placement-mode');
+    // Show ghost piece at center of board initially
+    updateMobileGhost({ clientX: canvas.getBoundingClientRect().left + canvas.width/2,
+                      clientY: canvas.getBoundingClientRect().top + canvas.height/2 });
+  }
+
+  function exitMobilePiecePlacement() {
+    mobilePiecePlacementMode = null;
+    setStatus('');
+    canvas.classList.remove('mobile-placement-mode');
+    renderer.draw(model.selectedId); // Clear any ghost pieces
+  }
+
+  function updateMobileGhost(event) {
+    if (!mobilePiecePlacementMode) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    const size = BoardModel.typeToSize(mobilePiecePlacementMode.type);
+    const grid = renderer.pixelToGrid(px, py);
+    const candidate = { x: grid.x, y: grid.y, w: size.w, h: size.h };
+
+    if (model.inBounds(candidate) && !model.collidesAny(candidate)) {
+      mobilePiecePlacementMode.ghost = candidate;
+    } else {
+      mobilePiecePlacementMode.ghost = null;
+    }
+
+    renderer.draw(model.selectedId, mobilePiecePlacementMode.ghost);
+  }
+
+  // Close mobile menu when clicking sidebar links/buttons on mobile
+  if (sidebar) {
+    sidebar.addEventListener('click', (e) => {
+      // Handle piece palette clicks for mobile
+      if (e.target.closest('.palette__item')) {
+        const paletteItem = e.target.closest('.palette__item');
+        const pieceType = paletteItem.dataset.type;
+        if (pieceType && window.innerWidth <= 768) {
+          enterMobilePiecePlacement(pieceType);
+          return;
+        }
+      }
+
+      // Close menu when clicking certain interactive elements
+      if (e.target.matches('button, select, input[type="file"]')) {
+        if (window.innerWidth <= 768) {
+          closeMobileMenu();
+        }
+      }
+    });
+  }
+
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      closeMobileMenu();
+      exitMobilePiecePlacement();
+    }
+  });
+
+  // Handle escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (mobilePiecePlacementMode) {
+        exitMobilePiecePlacement();
+      } else if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('open')) {
+        closeMobileMenu();
+      }
+    }
+  });
 
   // Playback control functions
   function enablePlaybackControls() {
@@ -161,6 +283,34 @@ speedRange.addEventListener('input', () => {
   function onPointerDown(e) {
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left; const py = e.clientY - rect.top;
+
+    // Handle mobile piece placement mode
+    if (mobilePiecePlacementMode) {
+      if (mobilePiecePlacementMode.ghost) {
+        const piece = model.createPiece(mobilePiecePlacementMode.type,
+                                       mobilePiecePlacementMode.ghost.x,
+                                       mobilePiecePlacementMode.ghost.y);
+        const ok = model.tryAddPiece(piece);
+        if (ok) {
+          setStatus(`Added ${piece.type} as ${piece.id}`);
+          model.selectedId = piece.id;
+          btnDelete.disabled = false;
+          hasUnsavedChanges = true;
+          updateSaveButton();
+          // Reset puzzle solved state when pieces are added
+          puzzleIsSolved = false;
+          animationPlayer = null;
+          updatePlaybackButtons();
+        } else {
+          setStatus('Cannot place piece here');
+        }
+      } else {
+        setStatus('Cannot place piece here');
+      }
+      exitMobilePiecePlacement();
+      return;
+    }
+
     const piece = hitTestPiece(px, py);
     if (piece) {
       model.selectedId = piece.id;
@@ -174,45 +324,117 @@ speedRange.addEventListener('input', () => {
     }
   }
 
-  function onPointerMove(e) {
+    function onPointerMove(e) {
+    // Handle mobile piece placement mode
+    if (mobilePiecePlacementMode) {
+      updateMobileGhost(e);
+      return;
+    }
+
     if (!dragState) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left; const py = e.clientY - rect.top;
     const { cellSize } = renderer.layout;
     const piece = model.pieces.find(p => p.id === dragState.id);
     if (!piece) return;
+
+        // Check if dragging outside canvas bounds or would result in out-of-bounds placement
+    const isOutsideCanvas = px < 0 || py < 0 || px > canvas.width || py > canvas.height;
     const dxPixels = px - dragState.startX; const dyPixels = py - dragState.startY;
     const dx = Math.round(dxPixels / cellSize); const dy = Math.round(dyPixels / cellSize);
-    const target = { ...piece, x: dragState.originX + dx, y: dragState.originY + dy };
-    let ghost = null;
-    if (model.inBounds(target) && !model.collidesAny(target, piece.id)) {
-      ghost = { x: target.x, y: target.y, w: target.w, h: target.h };
+    const targetX = dragState.originX + dx;
+    const targetY = dragState.originY + dy;
+    const wouldBeOutOfBounds = targetX < 0 || targetY < 0 ||
+                               targetX + piece.w > model.cols ||
+                               targetY + piece.h > model.rows;
+
+    if (isOutsideCanvas || wouldBeOutOfBounds) {
+      // Enter delete mode if not already in it
+      if (!isInDeleteMode) {
+        isInDeleteMode = true;
+        setStatus(`Release to delete ${piece.type} piece`);
+        canvas.classList.add('drag-delete-mode');
+        document.body.classList.add('drag-delete-active');
+      }
+      // Draw without the selected piece to show deletion preview
+      const tempPieces = model.pieces.filter(p => p.id !== piece.id);
+      const originalPieces = model.pieces;
+      model.pieces = tempPieces;
+      renderer.draw(null); // No selection, no ghost
+      model.pieces = originalPieces;
+    } else {
+      // Exit delete mode if currently in it
+      if (isInDeleteMode) {
+        isInDeleteMode = false;
+        setStatus('');
+        canvas.classList.remove('drag-delete-mode');
+        document.body.classList.remove('drag-delete-active');
+      }
+      // Normal drag behavior
+      const target = { ...piece, x: targetX, y: targetY };
+      let ghost = null;
+      if (model.inBounds(target) && !model.collidesAny(target, piece.id)) {
+        ghost = { x: target.x, y: target.y, w: target.w, h: target.h };
+      }
+      renderer.draw(model.selectedId, ghost);
     }
-    renderer.draw(model.selectedId, ghost);
   }
 
-  function onPointerUp(e) {
+    function onPointerUp(e) {
     if (!dragState) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left; const py = e.clientY - rect.top;
     const { cellSize } = renderer.layout;
     const piece = model.pieces.find(p => p.id === dragState.id);
+
+    // Check if pointer is outside the canvas bounds (drag-to-delete)
+    const isOutsideCanvas = px < 0 || py < 0 || px > canvas.width || py > canvas.height;
+
+    // Also check if the piece would end up outside the board bounds
     const dxPixels = px - dragState.startX; const dyPixels = py - dragState.startY;
     const dx = Math.round(dxPixels / cellSize); const dy = Math.round(dyPixels / cellSize);
-    if (dx !== 0 || dy !== 0) {
-      const ok = model.tryMovePiece(piece.id, dx, dy);
-      if (!ok) setStatus('Move blocked');
-      else {
-        setStatus('');
+    const targetX = dragState.originX + dx;
+    const targetY = dragState.originY + dy;
+    const wouldBeOutOfBounds = targetX < 0 || targetY < 0 ||
+                               targetX + piece.w > model.cols ||
+                               targetY + piece.h > model.rows;
+
+    if (isOutsideCanvas || wouldBeOutOfBounds) {
+      // Delete the piece
+      const idx = model.pieces.findIndex(p => p.id === dragState.id);
+      if (idx >= 0) {
+        model.pieces.splice(idx, 1);
+        setStatus(`Deleted ${piece.type} piece`);
         hasUnsavedChanges = true;
         updateSaveButton();
-        // Reset puzzle solved state when pieces are moved
+        // Reset puzzle solved state when pieces are deleted
         puzzleIsSolved = false;
         animationPlayer = null;
         updatePlaybackButtons();
+        model.selectedId = null;
+        btnDelete.disabled = true;
+      }
+    } else {
+      // Normal move logic
+      if (dx !== 0 || dy !== 0) {
+        const ok = model.tryMovePiece(piece.id, dx, dy);
+        if (!ok) setStatus('Move blocked');
+        else {
+          setStatus('');
+          hasUnsavedChanges = true;
+          updateSaveButton();
+          // Reset puzzle solved state when pieces are moved
+          puzzleIsSolved = false;
+          animationPlayer = null;
+          updatePlaybackButtons();
+        }
       }
     }
+
     dragState = null;
+    isInDeleteMode = false;
+    canvas.classList.remove('drag-delete-mode');
+    document.body.classList.remove('drag-delete-active');
     renderer.draw(model.selectedId);
   }
 
