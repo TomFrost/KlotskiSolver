@@ -21,28 +21,6 @@
 
     <div class="app__content">
       <aside class="sidebar">
-        <!-- Board Configuration Panel -->
-        <section class="panel">
-          <h2>Board</h2>
-          <div class="field">
-            <label for="cols">Columns</label>
-            <input id="cols" type="number" min="3" max="8" value="4" />
-          </div>
-          <div class="field">
-            <label for="rows">Rows</label>
-            <input id="rows" type="number" min="4" max="10" value="5" />
-          </div>
-          <div class="field">
-            <label>Goal top-left (x, y)</label>
-            <div class="row">
-              <input id="goal-x" type="number" min="0" value="1" />
-              <input id="goal-y" type="number" min="0" value="3" />
-            </div>
-            <small>Goal size fixed at 2×2</small>
-          </div>
-          <button id="btn-apply-board">Apply</button>
-        </section>
-
         <!-- Piece Palette Panel -->
         <section class="panel">
           <h2>Pieces</h2>
@@ -130,6 +108,13 @@
       <main class="main">
         <div class="board-wrapper">
           <canvas id="board" width="320" height="400" aria-label="Klotski board" role="img"></canvas>
+        </div>
+        <div class="playback-controls" id="playback-controls">
+          <button id="btn-rewind" title="Rewind to start" disabled>⏮</button>
+          <button id="btn-step-back" title="Step backward" disabled>⏴</button>
+          <button id="btn-play-pause" title="Play/Pause" disabled>▶</button>
+          <button id="btn-step-forward" title="Step forward" disabled>⏵</button>
+          <button id="btn-jump-end" title="Jump to end" disabled>⏭</button>
         </div>
         <div class="status" id="status"></div>
       </main>

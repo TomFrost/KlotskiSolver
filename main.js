@@ -1,7 +1,7 @@
 (function(){
   const { BoardModel } = window.Klotski;
   const { BoardRenderer } = window.Klotski;
-  const { animateMoves } = window.Klotski;
+  const { animateMoves, AnimationPlayer } = window.Klotski;
   const { clamp } = window.Klotski.utils;
 
   const canvas = document.getElementById('board');
@@ -13,11 +13,16 @@
   const speedRange = document.getElementById('speed');
   const speedValue = document.getElementById('speed-value');
 
-  const colsInput = document.getElementById('cols');
-  const rowsInput = document.getElementById('rows');
-  const goalXInput = document.getElementById('goal-x');
-  const goalYInput = document.getElementById('goal-y');
-  const applyBoardBtn = document.getElementById('btn-apply-board');
+  // Playback controls
+  const playbackControls = document.getElementById('playback-controls');
+  const btnRewind = document.getElementById('btn-rewind');
+  const btnStepBack = document.getElementById('btn-step-back');
+  const btnPlayPause = document.getElementById('btn-play-pause');
+  const btnStepForward = document.getElementById('btn-step-forward');
+  const btnJumpEnd = document.getElementById('btn-jump-end');
+
+  // Animation player instance
+  let animationPlayer = null;
 
   // Puzzles UI
   const saveBtn = document.getElementById('btn-save-puzzle');
@@ -41,11 +46,14 @@
   let currentLoadedPuzzle = null;
   let hasUnsavedChanges = false;
 
-  const model = new BoardModel({ cols: Number(colsInput.value), rows: Number(rowsInput.value), goalX: Number(goalXInput.value), goalY: Number(goalYInput.value) });
+  const model = new BoardModel({ cols: 4, rows: 5, goalX: 1, goalY: 3 });
   const renderer = new BoardRenderer(canvas, model);
 
   // Initialize Reset button as disabled
   btnReset.disabled = true;
+
+  // Initialize playback controls as disabled
+  updatePlaybackButtons();
 
   // Function to update save button state
   function updateSaveButton() {
@@ -53,6 +61,47 @@
   }
 
   function setStatus(text) { statusEl.textContent = text || ''; }
+
+  // Playback control functions
+  function enablePlaybackControls() {
+    // Future: Could enable/show playback UI here
+  }
+
+  function disablePlaybackControls() {
+    // Future: Could disable/hide playback UI here
+  }
+
+  function updatePlaybackButtons() {
+    if (!animationPlayer) {
+      btnRewind.disabled = true;
+      btnStepBack.disabled = true;
+      btnPlayPause.disabled = true;
+      btnStepForward.disabled = true;
+      btnJumpEnd.disabled = true;
+      disablePlaybackControls();
+      return;
+    }
+
+    const progress = animationPlayer.getProgress();
+    const isAtStart = progress === 0;
+    const isAtEnd = progress === 1;
+    const isPlaying = animationPlayer.isPlaying && !animationPlayer.isPaused;
+
+    // Check if we're truly at the very beginning (step 0, substep 0)
+    const isAtVeryBeginning = animationPlayer.currentStep === 0 && animationPlayer.currentSubStep === 0;
+
+    btnRewind.disabled = isAtVeryBeginning;
+    btnStepBack.disabled = isAtVeryBeginning;
+    btnPlayPause.disabled = isAtEnd;
+    btnStepForward.disabled = isAtEnd;
+    btnJumpEnd.disabled = isAtEnd;
+
+    // Update play/pause button text
+    btnPlayPause.textContent = isPlaying ? '⏸' : '▶';
+    btnPlayPause.title = isPlaying ? 'Pause' : 'Play';
+
+    enablePlaybackControls();
+  }
 
   function resize() {
     renderer.resizeToContainer();
@@ -76,13 +125,7 @@ speedRange.addEventListener('input', () => {
   localStorage.setItem(SPEED_KEY, String(speedRange.value));
 });
 
-  // Board settings
-  applyBoardBtn.addEventListener('click', () => {
-    model.setBoardSize(Number(colsInput.value), Number(rowsInput.value));
-    model.setGoalPosition(Number(goalXInput.value), Number(goalYInput.value));
-    setStatus('Board updated');
-    renderer.draw(model.selectedId);
-  });
+
 
   // Selection and drag handling
   let dragState = null; // { id, startX, startY, originX, originY }
@@ -269,6 +312,9 @@ speedRange.addEventListener('input', () => {
     btnReset.disabled = true; // Disable Reset when clearing
     hasUnsavedChanges = true;
     updateSaveButton();
+    // Disable playback controls when clearing
+    animationPlayer = null;
+    updatePlaybackButtons();
     renderer.draw(model.selectedId);
   });
 
@@ -277,6 +323,9 @@ speedRange.addEventListener('input', () => {
     setStatus('Reset to saved state');
     btnDelete.disabled = !!model.selectedId;
     btnReset.disabled = true; // Disable Reset after using it
+    // Disable playback controls when resetting
+    animationPlayer = null;
+    updatePlaybackButtons();
     renderer.draw(model.selectedId);
   });
 
@@ -303,11 +352,10 @@ speedRange.addEventListener('input', () => {
 
   function setFromState(state) {
     model.loadState(state);
-    colsInput.value = String(model.cols);
-    rowsInput.value = String(model.rows);
-    goalXInput.value = String(model.goal.x);
-    goalYInput.value = String(model.goal.y);
     btnReset.disabled = true; // Disable Reset when loading a new state
+    // Disable playback controls when loading a new state
+    animationPlayer = null;
+    updatePlaybackButtons();
     renderer.draw(model.selectedId);
   }
 
@@ -498,6 +546,71 @@ speedRange.addEventListener('input', () => {
   refreshList();
   if (!tryLoadFromHash()) tryLoadDefault();
 
+    // Helper function to auto-pause if currently playing and wait for it to complete
+  async function autoPauseIfPlaying() {
+    if (animationPlayer && animationPlayer.isPlaying && !animationPlayer.isPaused) {
+      animationPlayer.pause();
+
+      // Wait for the pause to actually take effect
+      let waitCount = 0;
+      const maxWait = 100; // Max 1 second wait (100 * 10ms)
+
+      while ((animationPlayer.pendingPause || animationPlayer.isPlaying) && !animationPlayer.isPaused && waitCount < maxWait) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        waitCount++;
+      }
+
+      return true;
+    }
+    return false;
+  }
+
+  // Playback control event listeners
+  btnRewind.addEventListener('click', async () => {
+    if (animationPlayer) {
+      await autoPauseIfPlaying();
+      animationPlayer.reset();
+      updatePlaybackButtons();
+    }
+  });
+
+  btnStepBack.addEventListener('click', async () => {
+    if (animationPlayer) {
+      await autoPauseIfPlaying();
+      animationPlayer.stepBackward();
+      updatePlaybackButtons();
+    }
+  });
+
+  btnPlayPause.addEventListener('click', () => {
+    if (!animationPlayer) return;
+
+    if (animationPlayer.isPlaying && !animationPlayer.isPaused) {
+      animationPlayer.pause();
+    } else if (animationPlayer.isPaused) {
+      animationPlayer.resume();
+    } else {
+      animationPlayer.play();
+    }
+    updatePlaybackButtons();
+  });
+
+  btnStepForward.addEventListener('click', async () => {
+    if (animationPlayer) {
+      await autoPauseIfPlaying();
+      animationPlayer.stepForward();
+      updatePlaybackButtons();
+    }
+  });
+
+  btnJumpEnd.addEventListener('click', async () => {
+    if (animationPlayer) {
+      await autoPauseIfPlaying();
+      animationPlayer.jumpToEnd();
+      updatePlaybackButtons();
+    }
+  });
+
   // Solve
   btnSolve.addEventListener('click', async () => {
     let solveSuccessful = false;
@@ -525,24 +638,40 @@ speedRange.addEventListener('input', () => {
       const solveEndTime = performance.now();
       const solveTimeMs = solveEndTime - solveStartTime;
 
+      if (moves === null) {
+        setStatus('This puzzle has no solution');
+        return;
+      }
       if (!Array.isArray(moves)) throw new Error('Solver did not return an array');
-      setStatus(`Animating ${moves.length} moves...`);
-      btnSolve.disabled = true; btnReset.disabled = true; btnClear.disabled = true; btnDelete.disabled = true; applyBoardBtn.disabled = true;
-      await animateMoves({
+      setStatus(`Solution found - ${moves.length} moves in ${(solveTimeMs / 1000).toFixed(3)}s`);
+
+      // Create animation player
+      animationPlayer = new AnimationPlayer({
         model,
         renderer,
         moves,
         msPerStep: Number(speedRange.value),
         onStatus: setStatus,
-        getSpeed: () => Number(speedRange.value)
+        getSpeed: () => Number(speedRange.value),
+        onProgress: () => updatePlaybackButtons(),
+        onComplete: () => {
+          setStatus(`Animation complete - ${moves.length} moves`);
+          updatePlaybackButtons();
+        }
       });
-      setStatus(`Done - ${moves.length} moves in ${(solveTimeMs / 1000).toFixed(3)}s`);
+
+      console.log('Animation player created with', moves.length, 'moves');
+
+      // Enable playback controls and start auto-play
+      updatePlaybackButtons();
+      animationPlayer.play();
+
       solveSuccessful = true;
     } catch (err) {
       console.error(err);
       setStatus('Error: ' + (err?.message || String(err)));
     } finally {
-      btnSolve.disabled = false; btnClear.disabled = false; btnDelete.disabled = !model.selectedId; applyBoardBtn.disabled = false;
+      btnSolve.disabled = false; btnClear.disabled = false; btnDelete.disabled = !model.selectedId;
       // Only enable Reset if the solve was successful
       if (solveSuccessful) {
         btnReset.disabled = false;
