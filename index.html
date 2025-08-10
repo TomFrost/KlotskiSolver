@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Klotski Builder & Solver UI</title>
+  <title>Klotski Builder & Solver</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,20 +13,23 @@
       <div class="header__actions">
         <button id="btn-clear" title="Remove all pieces">Clear</button>
         <button id="btn-reset" title="Reset to state when Solve pressed">Reset</button>
+        <button id="btn-save-puzzle" title="Save current puzzle" disabled>Save</button>
+        <button id="btn-share-puzzle" title="Share puzzle link">Share</button>
         <button id="btn-solve" class="primary">Solve</button>
       </div>
     </header>
 
     <div class="app__content">
       <aside class="sidebar">
-        <div class="panel">
+        <!-- Board Configuration Panel -->
+        <section class="panel">
           <h2>Board</h2>
           <div class="field">
-            <label>Columns</label>
+            <label for="cols">Columns</label>
             <input id="cols" type="number" min="3" max="8" value="4" />
           </div>
           <div class="field">
-            <label>Rows</label>
+            <label for="rows">Rows</label>
             <input id="rows" type="number" min="4" max="10" value="5" />
           </div>
           <div class="field">
@@ -38,76 +41,78 @@
             <small>Goal size fixed at 2×2</small>
           </div>
           <button id="btn-apply-board">Apply</button>
-        </div>
+        </section>
 
-        <div class="panel">
+        <!-- Piece Palette Panel -->
+        <section class="panel">
           <h2>Pieces</h2>
           <div id="palette" class="palette" title="Drag a piece onto the board">
             <div class="palette__item" data-type="2x2" title="2×2 (goal)">
-              <div class="piece-mini piece-mini--2x2"><div class="piece-mini__rect"></div></div>
+              <div class="piece-mini piece-mini--2x2">
+                <div class="piece-mini__rect"></div>
+              </div>
               <span class="label">2×2</span>
             </div>
             <div class="palette__item" data-type="2x1" title="2×1">
-              <div class="piece-mini piece-mini--2x1"><div class="piece-mini__rect"></div></div>
+              <div class="piece-mini piece-mini--2x1">
+                <div class="piece-mini__rect"></div>
+              </div>
               <span class="label">2×1</span>
             </div>
             <div class="palette__item" data-type="1x2" title="1×2">
-              <div class="piece-mini piece-mini--1x2"><div class="piece-mini__rect"></div></div>
+              <div class="piece-mini piece-mini--1x2">
+                <div class="piece-mini__rect"></div>
+              </div>
               <span class="label">1×2</span>
             </div>
             <div class="palette__item" data-type="1x1" title="1×1">
-              <div class="piece-mini piece-mini--1x1"><div class="piece-mini__rect"></div></div>
+              <div class="piece-mini piece-mini--1x1">
+                <div class="piece-mini__rect"></div>
+              </div>
               <span class="label">1×1</span>
             </div>
           </div>
           <button id="btn-delete" disabled>Delete Selected</button>
-        </div>
+        </section>
 
-        <div class="panel">
+        <!-- Puzzle Management Panel -->
+        <section class="panel">
           <h2>Puzzles</h2>
-          <div class="field">
-            <label>Name</label>
-            <input id="puzzle-name" type="text" placeholder="My puzzle" />
-          </div>
-          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <button id="btn-save-puzzle">Save</button>
-            <button id="btn-load-puzzle" disabled>Load</button>
-          </div>
-          <div class="field">
-            <label>Saved</label>
-            <select id="puzzle-list" size="6" style="width:100%;"></select>
-          </div>
-          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <button id="btn-delete-puzzle" disabled>Delete</button>
-            <button id="btn-share-puzzle">Share Link</button>
-          </div>
-          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
-            <button id="btn-export-json">Export JSON</button>
-            <label class="import-label" style="display:inline-block; border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 8px; text-align:center; cursor:pointer;">
-              <input id="file-import" type="file" accept="application/json" style="display:none;" />
-              Import JSON
-            </label>
-          </div>
-          <div class="row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
-            <button id="btn-set-default">Set Default</button>
-            <button id="btn-clear-default">Clear Default</button>
-          </div>
-          <div class="field">
-            <label>Default on refresh</label>
-            <input id="default-display" type="text" disabled placeholder="(none)" />
-          </div>
-        </div>
 
-        <div class="panel">
+          <!-- Saved Puzzles -->
+          <div class="puzzle-saved">
+            <label for="puzzle-list">Saved Puzzles</label>
+            <select id="puzzle-list" size="4"></select>
+            <div class="puzzle-saved-actions">
+              <button id="btn-load-puzzle" disabled>Load</button>
+              <button id="btn-delete-puzzle" disabled>Delete</button>
+            </div>
+          </div>
+
+          <!-- Import/Export -->
+          <div class="puzzle-io">
+            <div class="puzzle-io-row">
+              <button id="btn-export-json">Export JSON</button>
+              <label class="import-label">
+                <input id="file-import" type="file" accept="application/json" />
+                Import JSON
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Animation Control Panel -->
+        <section class="panel">
           <h2>Animation</h2>
           <div class="field">
-            <label>Speed (ms/step)</label>
+            <label for="speed">Speed (ms/step)</label>
             <input id="speed" type="range" min="50" max="1000" value="300" />
             <div class="speed-value"><span id="speed-value">300</span> ms</div>
           </div>
-        </div>
+        </section>
 
-        <div class="panel">
+        <!-- Help Panel -->
+        <section class="panel">
           <h2>Help</h2>
           <ul class="help">
             <li>Drag from palette to add a piece.</li>
@@ -115,7 +120,7 @@
             <li>Pieces snap to grid; moves are blocked by collisions.</li>
             <li>Press Solve to run your algorithm in <code>user-solver.js</code>.</li>
           </ul>
-        </div>
+        </section>
       </aside>
 
       <main class="main">
@@ -124,6 +129,26 @@
         </div>
         <div class="status" id="status"></div>
       </main>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Save Puzzle</h3>
+          <button class="modal-close" id="save-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label for="save-puzzle-name">Puzzle Name</label>
+            <input id="save-puzzle-name" type="text" placeholder="Enter puzzle name" />
+          </div>
+          <div class="save-options">
+            <button id="btn-save-new" class="primary">Save New</button>
+            <button id="btn-save-overwrite" disabled>Overwrite Current</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

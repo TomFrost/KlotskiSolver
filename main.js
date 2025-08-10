@@ -20,7 +20,6 @@
   const applyBoardBtn = document.getElementById('btn-apply-board');
 
   // Puzzles UI
-  const nameInput = document.getElementById('puzzle-name');
   const saveBtn = document.getElementById('btn-save-puzzle');
   const loadBtn = document.getElementById('btn-load-puzzle');
   const deleteBtn = document.getElementById('btn-delete-puzzle');
@@ -28,15 +27,28 @@
   const exportBtn = document.getElementById('btn-export-json');
   const importInput = document.getElementById('file-import');
   const shareBtn = document.getElementById('btn-share-puzzle');
-  const setDefaultBtn = document.getElementById('btn-set-default');
-  const clearDefaultBtn = document.getElementById('btn-clear-default');
-  const defaultDisplay = document.getElementById('default-display');
+
+  // Modal elements
+  const saveModal = document.getElementById('save-modal');
+  const saveModalClose = document.getElementById('save-modal-close');
+  const savePuzzleName = document.getElementById('save-puzzle-name');
+  const saveNewBtn = document.getElementById('btn-save-new');
+  const saveOverwriteBtn = document.getElementById('btn-save-overwrite');
+
+  // Track current loaded puzzle for overwrite functionality
+  let currentLoadedPuzzle = null;
+  let hasUnsavedChanges = false;
 
   const model = new BoardModel({ cols: Number(colsInput.value), rows: Number(rowsInput.value), goalX: Number(goalXInput.value), goalY: Number(goalYInput.value) });
   const renderer = new BoardRenderer(canvas, model);
 
   // Initialize Reset button as disabled
   btnReset.disabled = true;
+
+  // Function to update save button state
+  function updateSaveButton() {
+    saveBtn.disabled = !hasUnsavedChanges;
+  }
 
   function setStatus(text) { statusEl.textContent = text || ''; }
 
@@ -129,7 +141,11 @@ speedRange.addEventListener('input', () => {
     if (dx !== 0 || dy !== 0) {
       const ok = model.tryMovePiece(piece.id, dx, dy);
       if (!ok) setStatus('Move blocked');
-      else setStatus('');
+      else {
+        setStatus('');
+        hasUnsavedChanges = true;
+        updateSaveButton();
+      }
     }
     dragState = null;
     renderer.draw(model.selectedId);
@@ -205,6 +221,8 @@ speedRange.addEventListener('input', () => {
             else {
               setStatus(`Added ${piece.type} as ${piece.id}`);
               model.selectedId = piece.id; btnDelete.disabled = false;
+              hasUnsavedChanges = true;
+              updateSaveButton();
             }
           }
         }
@@ -233,6 +251,8 @@ speedRange.addEventListener('input', () => {
     if (idx >= 0) {
       model.pieces.splice(idx, 1);
       setStatus('Piece deleted');
+      hasUnsavedChanges = true;
+      updateSaveButton();
     }
     model.selectedId = null;
     btnDelete.disabled = true;
@@ -245,6 +265,8 @@ speedRange.addEventListener('input', () => {
     setStatus('Board cleared');
     btnDelete.disabled = true;
     btnReset.disabled = true; // Disable Reset when clearing
+    hasUnsavedChanges = true;
+    updateSaveButton();
     renderer.draw(model.selectedId);
   });
 
@@ -259,15 +281,16 @@ speedRange.addEventListener('input', () => {
   // Puzzles helpers
   function refreshList() {
     const names = window.Klotski.Storage.listNames();
+    const defaultName = window.Klotski.Storage.getDefaultName();
     listEl.innerHTML = '';
     names.forEach(n => {
       const opt = document.createElement('option');
-      opt.value = n; opt.textContent = n;
+      opt.value = n;
+      opt.textContent = defaultName === n ? `★ ${n}` : n;
       listEl.appendChild(opt);
     });
     loadBtn.disabled = !listEl.value;
     deleteBtn.disabled = !listEl.value;
-    defaultDisplay.value = window.Klotski.Storage.getDefaultName() || '';
   }
 
   function setFromState(state) {
@@ -280,19 +303,91 @@ speedRange.addEventListener('input', () => {
     renderer.draw(model.selectedId);
   }
 
+  // Modal functions
+  function showSaveModal() {
+    saveModal.classList.add('show');
+    savePuzzleName.focus();
+    savePuzzleName.value = currentLoadedPuzzle || '';
+    saveOverwriteBtn.disabled = !currentLoadedPuzzle;
+  }
+
+  function hideSaveModal() {
+    saveModal.classList.remove('show');
+    savePuzzleName.value = '';
+  }
+
+  // Save button in header
   saveBtn.addEventListener('click', () => {
-    const name = (nameInput.value || '').trim();
+    showSaveModal();
+  });
+
+  // Modal close
+  saveModalClose.addEventListener('click', hideSaveModal);
+  saveModal.addEventListener('click', (e) => {
+    if (e.target === saveModal) hideSaveModal();
+  });
+
+  // Save new
+  saveNewBtn.addEventListener('click', () => {
+    const name = savePuzzleName.value.trim();
     if (!name) { setStatus('Enter a name to save'); return; }
     const state = model.getInitialState();
     window.Klotski.Storage.savePuzzle(name, state);
     refreshList();
+    hideSaveModal();
+    currentLoadedPuzzle = name;
+    hasUnsavedChanges = false;
+    updateSaveButton();
     setStatus(`Saved "${name}"`);
+  });
+
+  // Save overwrite
+  saveOverwriteBtn.addEventListener('click', () => {
+    if (!currentLoadedPuzzle) return;
+    const state = model.getInitialState();
+    window.Klotski.Storage.savePuzzle(currentLoadedPuzzle, state);
+    refreshList();
+    hideSaveModal();
+    hasUnsavedChanges = false;
+    updateSaveButton();
+    setStatus(`Updated "${currentLoadedPuzzle}"`);
+  });
+
+  // Enter key in modal
+  savePuzzleName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (currentLoadedPuzzle && saveOverwriteBtn.disabled === false) {
+        saveOverwriteBtn.click();
+      } else {
+        saveNewBtn.click();
+      }
+    } else if (e.key === 'Escape') {
+      hideSaveModal();
+    }
   });
 
   listEl.addEventListener('change', () => {
     loadBtn.disabled = !listEl.value;
     deleteBtn.disabled = !listEl.value;
-    nameInput.value = listEl.value || '';
+  });
+
+  // Right-click to set/clear default
+  listEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const name = listEl.value;
+    if (!name) return;
+
+    const defaultName = window.Klotski.Storage.getDefaultName();
+    if (defaultName === name) {
+      // Clear default
+      window.Klotski.Storage.clearDefaultName();
+      setStatus(`Removed "${name}" as default`);
+    } else {
+      // Set as default
+      window.Klotski.Storage.setDefaultName(name);
+      setStatus(`Set "${name}" as default`);
+    }
+    refreshList();
   });
 
   loadBtn.addEventListener('click', () => {
@@ -301,6 +396,9 @@ speedRange.addEventListener('input', () => {
     const state = window.Klotski.Storage.getPuzzle(name);
     if (state) {
       setFromState(state);
+      currentLoadedPuzzle = name;
+      hasUnsavedChanges = false;
+      updateSaveButton();
       setStatus(`Loaded "${name}"`);
     }
   });
@@ -309,6 +407,9 @@ speedRange.addEventListener('input', () => {
     const name = listEl.value;
     if (!name) return;
     window.Klotski.Storage.deletePuzzle(name);
+    if (currentLoadedPuzzle === name) {
+      currentLoadedPuzzle = null;
+    }
     refreshList();
     setStatus(`Deleted "${name}"`);
   });
@@ -318,7 +419,8 @@ speedRange.addEventListener('input', () => {
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = (nameInput.value || 'klotski-puzzle') + '.json';
+    a.href = url;
+    a.download = (currentLoadedPuzzle || 'klotski-puzzle') + '.json';
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   });
@@ -330,6 +432,9 @@ speedRange.addEventListener('input', () => {
       const text = await file.text();
       const state = JSON.parse(text);
       setFromState(state);
+      currentLoadedPuzzle = null; // Imported puzzles are not from saves
+      hasUnsavedChanges = false;
+      updateSaveButton();
       setStatus('Imported from JSON');
     } catch (err) {
       setStatus('Import failed: ' + (err?.message || String(err)));
@@ -355,24 +460,13 @@ speedRange.addEventListener('input', () => {
     try {
       const state = JSON.parse(atob(decodeURIComponent(hash)));
       setFromState(state);
+      currentLoadedPuzzle = null; // Hash loads are not from saves
+      hasUnsavedChanges = false;
+      updateSaveButton();
       setStatus('Loaded from link');
       return true;
     } catch { return false; }
   }
-
-  setDefaultBtn.addEventListener('click', () => {
-    const name = listEl.value || nameInput.value.trim();
-    if (!name) { setStatus('Choose or enter a name'); return; }
-    window.Klotski.Storage.setDefaultName(name);
-    refreshList();
-    setStatus(`Default set to "${name}"`);
-  });
-
-  clearDefaultBtn.addEventListener('click', () => {
-    window.Klotski.Storage.clearDefaultName();
-    refreshList();
-    setStatus('Default cleared');
-  });
 
   function tryLoadDefault() {
     const def = window.Klotski.Storage.getDefaultName();
@@ -380,6 +474,9 @@ speedRange.addEventListener('input', () => {
     const state = window.Klotski.Storage.getPuzzle(def);
     if (!state) return false;
     setFromState(state);
+    currentLoadedPuzzle = def;
+    hasUnsavedChanges = false;
+    updateSaveButton();
     setStatus(`Loaded default "${def}"`);
     return true;
   }
