@@ -1,6 +1,6 @@
 (function(){
   /** Animate a sequence of moves on the model, calling render on each step */
-  async function animateMoves({ model, renderer, moves, msPerStep = 300, onStatus }) {
+  async function animateMoves({ model, renderer, moves, msPerStep = 300, onStatus, getSpeed }) {
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     // Interpolate one grid step for a single piece
@@ -33,12 +33,21 @@
     let step = 0;
     for (const move of moves) {
       const count = Math.max(1, move.count ?? 1);
+      step++;
+
+      // Show status message for the move (including count if > 1)
+      const statusText = count > 1
+        ? `Step ${step}: ${move.id} ${move.dir} ${count} times`
+        : `Step ${step}: ${move.id} ${move.dir}`;
+      onStatus?.(statusText);
+
+      // Animate each individual step
       for (let i = 0; i < count; i++) {
-        step++;
         let dx = 0, dy = 0;
         if (move.dir === 'left') dx = -1; else if (move.dir === 'right') dx = 1; else if (move.dir === 'up') dy = -1; else if (move.dir === 'down') dy = 1;
-        onStatus?.(`Step ${step}: ${move.id} ${move.dir}`);
-        await animateSingleStep(move.id, dx, dy, msPerStep);
+        // Get current speed for this step (use getSpeed function if provided, otherwise use msPerStep)
+        const currentSpeed = getSpeed ? getSpeed() : msPerStep;
+        await animateSingleStep(move.id, dx, dy, currentSpeed);
       }
     }
   }

@@ -31,6 +31,7 @@
     clear() {
       this.pieces = [];
       this.selectedId = null;
+      this.nextId = createIdGenerator(); // Reset ID generator to start from 'A'
     }
 
     resetToLastSaved() {

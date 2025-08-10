@@ -35,6 +35,9 @@
   const model = new BoardModel({ cols: Number(colsInput.value), rows: Number(rowsInput.value), goalX: Number(goalXInput.value), goalY: Number(goalYInput.value) });
   const renderer = new BoardRenderer(canvas, model);
 
+  // Initialize Reset button as disabled
+  btnReset.disabled = true;
+
   function setStatus(text) { statusEl.textContent = text || ''; }
 
   function resize() {
@@ -241,6 +244,7 @@ speedRange.addEventListener('input', () => {
     model.clear();
     setStatus('Board cleared');
     btnDelete.disabled = true;
+    btnReset.disabled = true; // Disable Reset when clearing
     renderer.draw(model.selectedId);
   });
 
@@ -248,6 +252,7 @@ speedRange.addEventListener('input', () => {
     model.resetToLastSaved();
     setStatus('Reset to saved state');
     btnDelete.disabled = !!model.selectedId;
+    btnReset.disabled = true; // Disable Reset after using it
     renderer.draw(model.selectedId);
   });
 
@@ -271,6 +276,7 @@ speedRange.addEventListener('input', () => {
     rowsInput.value = String(model.rows);
     goalXInput.value = String(model.goal.x);
     goalYInput.value = String(model.goal.y);
+    btnReset.disabled = true; // Disable Reset when loading a new state
     renderer.draw(model.selectedId);
   }
 
@@ -383,6 +389,7 @@ speedRange.addEventListener('input', () => {
 
   // Solve
   btnSolve.addEventListener('click', async () => {
+    let solveSuccessful = false;
     try {
       setStatus('Preparing state...');
       const initial = model.getInitialState();
@@ -391,6 +398,8 @@ speedRange.addEventListener('input', () => {
 
       setStatus('Calling user solver...');
       let moves = [];
+      const solveStartTime = performance.now();
+
       if (typeof window.solve === 'function') {
         const result = window.solve(initial);
         moves = Array.isArray(result) ? result : await result;
@@ -402,16 +411,31 @@ speedRange.addEventListener('input', () => {
         return;
       }
 
+      const solveEndTime = performance.now();
+      const solveTimeMs = solveEndTime - solveStartTime;
+
       if (!Array.isArray(moves)) throw new Error('Solver did not return an array');
       setStatus(`Animating ${moves.length} moves...`);
       btnSolve.disabled = true; btnReset.disabled = true; btnClear.disabled = true; btnDelete.disabled = true; applyBoardBtn.disabled = true;
-      await animateMoves({ model, renderer, moves, msPerStep: Number(speedRange.value), onStatus: setStatus });
-      setStatus('Done');
+      await animateMoves({
+        model,
+        renderer,
+        moves,
+        msPerStep: Number(speedRange.value),
+        onStatus: setStatus,
+        getSpeed: () => Number(speedRange.value)
+      });
+      setStatus(`Done - ${moves.length} moves in ${(solveTimeMs / 1000).toFixed(3)}s`);
+      solveSuccessful = true;
     } catch (err) {
       console.error(err);
       setStatus('Error: ' + (err?.message || String(err)));
     } finally {
-      btnSolve.disabled = false; btnReset.disabled = false; btnClear.disabled = false; btnDelete.disabled = !model.selectedId; applyBoardBtn.disabled = false;
+      btnSolve.disabled = false; btnClear.disabled = false; btnDelete.disabled = !model.selectedId; applyBoardBtn.disabled = false;
+      // Only enable Reset if the solve was successful
+      if (solveSuccessful) {
+        btnReset.disabled = false;
+      }
       renderer.draw(model.selectedId);
     }
   });
