@@ -1,4 +1,4 @@
-# Klotski Solver
+# <img src="favicon.svg" alt="Klotski Solver" width="32" height="32" style="vertical-align: middle; margin-right: 8px;"/> Klotski Solver
 
 An interactive, web-based Klotski puzzle solver with a beautiful UI and replacable solving algorithm.
 
