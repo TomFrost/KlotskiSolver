@@ -18,34 +18,17 @@ Klotski is a classic sliding block puzzle where the goal is to move a large 2×2
 - **Responsive Design**: Works on desktop and mobile devices
 - **Multiple Piece Types**: Support for 1×1, 1×2, 2×1, and 2×2 pieces
 
-## 🚀 Quick Start
-
-### Option 1: Use GitHub Pages (Recommended)
-
-1. Fork this repository to your GitHub account
-2. Go to your fork's Settings → Pages
-3. Set Source to "Deploy from a branch"
-4. Select "main" branch and "/ (root)" folder
-5. Your solver will be available at `https://yourusername.github.io/klotski-solver`
-
-### Option 2: Local Development
+## 🚀 Development Quick Start
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/klotski-solver.git
-   cd klotski-solver
+   git clone https://github.com/TomFrost/KlotskiSolver.git
+   cd KlotskiSolver
    ```
 
-2. Open `index.html` in your browser or serve it locally:
-   ```bash
-   # Using Python 3
-   python -m http.server 8000
+2. Open `index.html` in your browser. It's that easy!
 
-   # Using Node.js (if you have http-server installed)
-   npx http-server
-   ```
-
-3. Navigate to `http://localhost:8000` to start solving puzzles!
+3. When you make a change, just refresh.
 
 ## 🎮 How to Use
 
