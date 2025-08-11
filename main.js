@@ -26,6 +26,10 @@
   const btnStepForward = document.getElementById('btn-step-forward');
   const btnJumpEnd = document.getElementById('btn-jump-end');
 
+  // Progress controls
+  const progressControl = document.getElementById('progress-control');
+  const progressSlider = document.getElementById('progress-slider');
+
   // Animation player instance
   let animationPlayer = null;
 
@@ -87,6 +91,9 @@
 
   // Initialize playback controls as disabled
   updatePlaybackButtons();
+
+  // Initialize progress display
+  initializeProgressDisplay();
 
   // Initialize 2x2 palette state
   update2x2PaletteState();
@@ -233,13 +240,49 @@
     }
   });
 
+  // Progress control functions
+  function showProgressControls() {
+    progressControl.style.display = 'flex';
+  }
+
+  function initializeProgressDisplay() {
+    // Always show progress bar, but disabled when no solution
+    showProgressControls();
+    progressSlider.max = 100;
+    progressSlider.value = 0;
+    progressSlider.disabled = true;
+    progressSlider.style.setProperty('--progress-width', '0%');
+  }
+
+  function updateProgressDisplay() {
+    if (!animationPlayer) {
+      initializeProgressDisplay();
+      return;
+    }
+
+    const totalSteps = animationPlayer.getTotalSteps();
+    const currentStep = animationPlayer.getCurrentStepNumber();
+    const progress = animationPlayer.getProgress();
+
+    // Update slider
+    progressSlider.max = totalSteps;
+    progressSlider.value = currentStep;
+    progressSlider.disabled = false;
+
+    // Update progress fill
+    const progressPercent = (progress * 100);
+    progressSlider.style.setProperty('--progress-width', `${progressPercent}%`);
+
+    showProgressControls();
+  }
+
   // Playback control functions
   function enablePlaybackControls() {
-    // Future: Could enable/show playback UI here
+    updateProgressDisplay();
   }
 
   function disablePlaybackControls() {
-    // Future: Could disable/hide playback UI here
+    initializeProgressDisplay();
   }
 
   function updatePlaybackButtons() {
@@ -268,8 +311,8 @@
     const isAtEnd = progress === 1;
     const isPlaying = animationPlayer.isPlaying && !animationPlayer.isPaused;
 
-    // Check if we're truly at the very beginning (step 0, substep 0)
-    const isAtVeryBeginning = animationPlayer.currentStep === 0 && animationPlayer.currentSubStep === 0;
+    // Check if we're truly at the very beginning (step 0)
+    const isAtVeryBeginning = animationPlayer.currentStep === 0;
 
     btnRewind.disabled = isAtVeryBeginning;
     btnStepBack.disabled = isAtVeryBeginning;
@@ -285,6 +328,7 @@
     btnPlayPause.classList.remove('solve-mode');
 
     enablePlaybackControls();
+    updateProgressDisplay();
   }
 
   function resize() {
@@ -952,6 +996,26 @@ speedRange.addEventListener('input', () => {
       animationPlayer.jumpToEnd();
       updatePlaybackButtons();
     }
+  });
+
+    // Progress slider scrubbing
+  progressSlider.addEventListener('input', async (e) => {
+    if (!animationPlayer) return;
+
+    // Pause playback during scrubbing
+    await autoPauseIfPlaying();
+
+    const targetStep = parseInt(e.target.value);
+    const totalSteps = animationPlayer.getTotalSteps();
+    const progress = totalSteps > 0 ? targetStep / totalSteps : 0;
+
+    // Update progress fill immediately for responsive feedback
+    const progressPercent = (progress * 100);
+    progressSlider.style.setProperty('--progress-width', `${progressPercent}%`);
+
+    // Seek to the target position
+    animationPlayer.seekToProgress(progress);
+    updatePlaybackButtons();
   });
 
   // Solve function

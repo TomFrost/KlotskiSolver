@@ -65,7 +65,6 @@
       this.onComplete = onComplete;
 
       this.currentStep = 0;
-      this.currentSubStep = 0;
       this.isPlaying = false;
       this.isPaused = false;
       this.pendingPause = false; // Pause after current animation completes
@@ -74,7 +73,7 @@
       this.animationReject = null;
     }
 
-    // Get current move and substep info
+    // Get current move info
     getCurrentMove() {
       if (this.currentStep >= this.moves.length) return null;
       const move = this.moves[this.currentStep];
@@ -82,34 +81,69 @@
       return {
         move,
         count,
-        subStep: this.currentSubStep,
-        isComplete: this.currentSubStep >= count
+        isComplete: false // Always false since we don't track partial completion
       };
     }
 
     // Get total progress (0-1)
     getProgress() {
       if (this.moves.length === 0) return 0;
-      let totalSteps = 0;
-      let completedSteps = 0;
+      const totalMoves = this.moves.length;
+      const completedMoves = this.currentStep;
+      return totalMoves > 0 ? completedMoves / totalMoves : 0;
+    }
 
-      for (let i = 0; i < this.moves.length; i++) {
-        const count = Math.max(1, this.moves[i].count ?? 1);
-        totalSteps += count;
-        if (i < this.currentStep) {
-          completedSteps += count;
-        } else if (i === this.currentStep) {
-          completedSteps += this.currentSubStep;
+    // Get total number of moves
+    getTotalSteps() {
+      return this.moves.length;
+    }
+
+    // Get current move number (1-based for UI display)
+    getCurrentStepNumber() {
+      return this.currentStep;
+    }
+
+    // Seek to a specific progress position (0-1)
+    seekToProgress(progress) {
+      // Clamp progress between 0 and 1
+      progress = Math.max(0, Math.min(1, progress));
+
+      const totalMoves = this.moves.length;
+      const targetMove = Math.floor(progress * totalMoves);
+
+      // Reset to beginning
+      this.model.resetToLastSaved();
+      this.currentStep = 0;
+
+      // Apply complete moves up to target move
+      for (let moveIndex = 0; moveIndex < targetMove && moveIndex < this.moves.length; moveIndex++) {
+        const move = this.moves[moveIndex];
+        const count = Math.max(1, move.count ?? 1);
+
+        // Apply the full move (all individual steps at once)
+        for (let step = 0; step < count; step++) {
+          let dx = 0, dy = 0;
+          if (move.dir === 'left') dx = -1;
+          else if (move.dir === 'right') dx = 1;
+          else if (move.dir === 'up') dy = -1;
+          else if (move.dir === 'down') dy = 1;
+
+          const ok = this.model.tryMovePiece(move.id, dx, dy);
+          if (!ok) throw new Error(`Illegal move when seeking: {id:${move.id}, dx:${dx}, dy:${dy}}`);
         }
+
+        this.currentStep++;
       }
 
-      return totalSteps > 0 ? completedSteps / totalSteps : 0;
+      // Update the display
+      this.renderer.draw(this.model.selectedId);
+      this.onProgress?.(this.getProgress());
+      this.showCurrentStepStatus();
     }
 
         // Reset to beginning
     reset() {
       this.currentStep = 0;
-      this.currentSubStep = 0;
       this.isPlaying = false;
       this.isPaused = false;
       this.pendingPause = false;
@@ -122,7 +156,6 @@
     // Jump to end
     jumpToEnd() {
       this.currentStep = this.moves.length;
-      this.currentSubStep = 0;
       this.isPlaying = false;
       this.isPaused = false;
       this.pendingPause = false;
@@ -149,15 +182,15 @@
       this.onComplete?.();
     }
 
-        // Step forward one move
+        // Step forward one complete move
     stepForward() {
       if (this.currentStep >= this.moves.length) return false;
 
       const move = this.moves[this.currentStep];
       const count = Math.max(1, move.count ?? 1);
 
-      if (this.currentSubStep < count) {
-        // Execute one substep
+      // Execute the complete move (all individual steps)
+      for (let i = 0; i < count; i++) {
         let dx = 0, dy = 0;
         if (move.dir === 'left') dx = -1;
         else if (move.dir === 'right') dx = 1;
@@ -166,96 +199,56 @@
 
         const ok = this.model.tryMovePiece(move.id, dx, dy);
         if (!ok) throw new Error(`Illegal move: {id:${move.id}, dx:${dx}, dy:${dy}}`);
-
-        this.currentSubStep++;
-        this.renderer.draw(this.model.selectedId);
-        this.onProgress?.(this.getProgress());
-
-        // Show status message for the step that was just executed
-        const statusText = count > 1
-          ? `Step ${this.currentStep + 1}: ${move.id} ${move.dir} ${count} times (${this.currentSubStep}/${count})`
-          : `Step ${this.currentStep + 1}: ${move.id} ${move.dir}`;
-        this.onStatus?.(statusText);
-
-        // If we completed this move, advance to next
-        if (this.currentSubStep >= count) {
-          this.currentStep++;
-          this.currentSubStep = 0;
-
-          if (this.currentStep >= this.moves.length) {
-            this.onComplete?.();
-            return false;
-          }
-        }
-
-        return true;
-      } else if (this.currentStep < this.moves.length - 1) {
-        // Move to next step if current step is complete
-        this.currentStep++;
-        this.currentSubStep = 0;
-        return this.stepForward();
       }
 
-      return false;
-    }
+      this.currentStep++;
+      this.renderer.draw(this.model.selectedId);
+      this.onProgress?.(this.getProgress());
 
-    // Step backward one move
-    stepBackward() {
-      if (this.currentStep <= 0 && this.currentSubStep <= 0) return false;
+      // Show status message for the move that was just executed
+      const totalMoves = this.getTotalSteps();
+      const currentMoveNum = this.getCurrentStepNumber();
+      const statusText = count > 1
+        ? `Move ${currentMoveNum} of ${totalMoves}: ${move.id} ${move.dir} ${count} spaces`
+        : `Move ${currentMoveNum} of ${totalMoves}: ${move.id} ${move.dir}`;
+      this.onStatus?.(statusText);
 
-                  if (this.currentSubStep > 0) {
-        // Normal undo within or between steps
-        this.undoLastMove();
-        this.currentSubStep--;
-        this.renderer.draw(this.model.selectedId);
-        this.onProgress?.(this.getProgress());
-        this.showCurrentStepStatus();
-        return true;
-      } else if (this.currentStep > 0) {
-        // Check if we're going back to the very beginning (Step 1 to initial state)
-        if (this.currentStep === 1 && this.currentSubStep === 0) {
-          // Use the same logic as the rewind button since it works correctly
-          this.reset();
-          return true;
-        }
-        // Capture info about the move we're undoing
-        const undoingMove = this.moves[this.currentStep];
-
-        // Go back to previous move
-        this.currentStep--;
-        const move = this.moves[this.currentStep];
-        const count = Math.max(1, move.count ?? 1);
-        this.currentSubStep = count - 1;
-        this.undoLastMove();
-        this.renderer.draw(this.model.selectedId);
-        this.onProgress?.(this.getProgress());
-
-        // Show appropriate status message for current position
-        this.showCurrentStepStatus();
-
-        return true;
-      } else if (this.currentStep === 0 && this.currentSubStep === 0) {
-        // We're at the very beginning, can't go back further
+      if (this.currentStep >= this.moves.length) {
+        this.onComplete?.();
         return false;
       }
 
-      return false;
+      return true;
     }
 
-    // Undo the last move that was made
-    undoLastMove() {
-      if (this.currentStep <= 0 && this.currentSubStep <= 0) return;
+    // Step backward one complete move
+    stepBackward() {
+      if (this.currentStep <= 0) return false;
 
+      // Go back one complete move
+      this.currentStep--;
       const move = this.moves[this.currentStep];
-      let dx = 0, dy = 0;
-      if (move.dir === 'left') dx = 1; // Undo left = right
-      else if (move.dir === 'right') dx = -1; // Undo right = left
-      else if (move.dir === 'up') dy = 1; // Undo up = down
-      else if (move.dir === 'down') dy = -1; // Undo down = up
+      const count = Math.max(1, move.count ?? 1);
 
-      const ok = this.model.tryMovePiece(move.id, dx, dy);
-      if (!ok) throw new Error(`Illegal undo move: {id:${move.id}, dx:${dx}, dy:${dy}}`);
+      // Undo the complete move (all individual steps in reverse)
+      for (let i = 0; i < count; i++) {
+        let dx = 0, dy = 0;
+        if (move.dir === 'left') dx = 1; // Undo left = right
+        else if (move.dir === 'right') dx = -1; // Undo right = left
+        else if (move.dir === 'up') dy = 1; // Undo up = down
+        else if (move.dir === 'down') dy = -1; // Undo down = up
+
+        const ok = this.model.tryMovePiece(move.id, dx, dy);
+        if (!ok) throw new Error(`Illegal undo move: {id:${move.id}, dx:${dx}, dy:${dy}}`);
+      }
+      this.renderer.draw(this.model.selectedId);
+      this.onProgress?.(this.getProgress());
+      this.showCurrentStepStatus();
+
+      return true;
     }
+
+
 
     // Start playing
     play() {
@@ -301,43 +294,67 @@
         const count = Math.max(1, move.count ?? 1);
 
         // Show status message
+        const totalMoves = this.getTotalSteps();
+        const currentMoveNum = this.currentStep + 1;
         const statusText = count > 1
-          ? `Step ${this.currentStep + 1}: ${move.id} ${move.dir} ${count} times`
-          : `Step ${this.currentStep + 1}: ${move.id} ${move.dir}`;
+          ? `Move ${currentMoveNum} of ${totalMoves}: ${move.id} ${move.dir} ${count} spaces`
+          : `Move ${currentMoveNum} of ${totalMoves}: ${move.id} ${move.dir}`;
         this.onStatus?.(statusText);
 
-        // Animate current substep
-        if (this.currentSubStep < count) {
-          let dx = 0, dy = 0;
-          if (move.dir === 'left') dx = -1;
-          else if (move.dir === 'right') dx = 1;
-          else if (move.dir === 'up') dy = -1;
-          else if (move.dir === 'down') dy = 1;
+        // Animate the full move (all spaces at once)
+        let dx = 0, dy = 0;
+        if (move.dir === 'left') dx = -count;
+        else if (move.dir === 'right') dx = count;
+        else if (move.dir === 'up') dy = -count;
+        else if (move.dir === 'down') dy = count;
 
-                    const currentSpeed = this.getSpeed ? this.getSpeed() : this.msPerStep;
-          await this.animateSingleStep(move.id, dx, dy, currentSpeed);
+        const currentSpeed = this.getSpeed ? this.getSpeed() : this.msPerStep;
+        await this.animateFullMove(move.id, dx, dy, count, currentSpeed);
 
-          // Check for pending pause after animation completes
-          if (this.pendingPause) {
-            this.isPaused = true;
-            this.pendingPause = false;
-          }
-
-          this.currentSubStep++;
-          this.onProgress?.(this.getProgress());
-
-          // If we completed this move, advance to next
-          if (this.currentSubStep >= count) {
-            this.currentStep++;
-            this.currentSubStep = 0;
-
-            if (this.currentStep >= this.moves.length) {
-              this.isPlaying = false;
-              this.onComplete?.();
-              break;
-            }
-          }
+        // Check for pending pause after animation completes
+        if (this.pendingPause) {
+          this.isPaused = true;
+          this.pendingPause = false;
         }
+
+        // Move completed, advance to next
+        this.currentStep++;
+        this.onProgress?.(this.getProgress());
+
+        if (this.currentStep >= this.moves.length) {
+          this.isPlaying = false;
+          this.onComplete?.();
+          break;
+        }
+      }
+    }
+
+    // Animate a full move (potentially multiple spaces) with interpolation
+    async animateFullMove(pieceId, dx, dy, count, durationMs) {
+      const piece = this.model.pieces.find(p => p.id === pieceId);
+      if (!piece) throw new Error('Unknown piece id: ' + pieceId);
+      const from = { x: piece.x, y: piece.y };
+      const to = { x: piece.x + dx, y: piece.y + dy };
+
+      const start = performance.now();
+      const end = start + durationMs;
+
+      while (true) {
+        const now = performance.now();
+        const t = Math.min(1, (now - start) / (durationMs || 1));
+        const te = this.easeInOutSine(t);
+        this.renderer.draw(this.model.selectedId, null, { id: pieceId, from, to, t: te });
+
+        if (t >= 1) break;
+        await new Promise(resolve => setTimeout(resolve, 16));
+      }
+
+      // Commit the logical moves (apply all individual steps)
+      for (let i = 0; i < count; i++) {
+        const stepDx = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+        const stepDy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
+        const ok = this.model.tryMovePiece(pieceId, stepDx, stepDy);
+        if (!ok) throw new Error(`Illegal move when committing animation: {id:${pieceId}, step:${i+1}/${count}}`);
       }
     }
 
@@ -351,7 +368,7 @@
       const start = performance.now();
       const end = start + durationMs;
 
-            while (true) {
+      while (true) {
         const now = performance.now();
         const t = Math.min(1, (now - start) / (durationMs || 1));
         const te = this.easeInOutSine(t);
@@ -368,7 +385,10 @@
 
     // Show status message for current step position
     showCurrentStepStatus() {
-      if (this.currentStep === 0 && this.currentSubStep === 0) {
+      const totalMoves = this.getTotalSteps();
+      const currentMoveNum = this.getCurrentStepNumber();
+
+      if (this.currentStep === 0) {
         this.onStatus?.('Ready to solve');
         return;
       }
@@ -378,24 +398,13 @@
         return;
       }
 
-      // If we're at the beginning of a step (currentSubStep === 0),
-      // show the previous completed step
-      if (this.currentSubStep === 0 && this.currentStep > 0) {
-        const prevMove = this.moves[this.currentStep - 1];
-        const prevCount = Math.max(1, prevMove.count ?? 1);
-        const statusText = prevCount > 1
-          ? `Step ${this.currentStep}: ${prevMove.id} ${prevMove.dir} ${prevCount} times`
-          : `Step ${this.currentStep}: ${prevMove.id} ${prevMove.dir}`;
-        this.onStatus?.(statusText);
-      } else {
-        // Show current step in progress
-        const move = this.moves[this.currentStep];
-        const count = Math.max(1, move.count ?? 1);
-        const statusText = count > 1
-          ? `Step ${this.currentStep + 1}: ${move.id} ${move.dir} ${count} times (${this.currentSubStep}/${count})`
-          : `Step ${this.currentStep + 1}: ${move.id} ${move.dir}`;
-        this.onStatus?.(statusText);
-      }
+      // Show the last completed move
+      const lastMove = this.moves[this.currentStep - 1];
+      const count = Math.max(1, lastMove.count ?? 1);
+      const statusText = count > 1
+        ? `Move ${currentMoveNum} of ${totalMoves}: ${lastMove.id} ${lastMove.dir} ${count} spaces`
+        : `Move ${currentMoveNum} of ${totalMoves}: ${lastMove.id} ${lastMove.dir}`;
+      this.onStatus?.(statusText);
     }
 
     easeInOutSine(t) {
