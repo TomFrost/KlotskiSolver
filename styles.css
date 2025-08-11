@@ -154,14 +154,46 @@ button:disabled {
 
 /* Main content layout */
 .app__content {
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  display: grid !important;
+  grid-template-columns: 320px 1fr !important;
+  grid-template-areas: "sidebar main" !important;
   height: 100%;
   overflow: hidden;
+  /* Debug border to see grid areas */
+  /* border: 2px solid red; */
+}
+
+/* Ensure desktop layout overrides mobile at larger screens */
+@media (min-width: 769px) {
+  .app__content {
+    display: grid !important;
+    grid-template-columns: 320px 1fr !important;
+    grid-template-areas: "sidebar main" !important;
+    grid-template-rows: auto !important;
+    position: static !important;
+  }
+
+  .sidebar {
+    grid-area: sidebar !important;
+    position: static !important;
+    left: auto !important;
+    width: auto !important;
+    height: 100% !important;
+    z-index: auto !important;
+    max-width: none !important;
+    padding: 1.5rem !important;
+    transition: none !important;
+    top: auto !important;
+  }
+
+  .main {
+    grid-area: main !important;
+  }
 }
 
 /* Sidebar */
 .sidebar {
+  grid-area: sidebar !important;
   padding: 1.5rem;
   background: #1e293b;
   border-right: 1px solid #334155;
@@ -170,6 +202,19 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  /* Ensure sidebar stays in normal grid position on desktop */
+  position: static !important;
+  left: auto !important;
+  width: auto !important;
+  z-index: auto !important;
+  max-width: none !important;
+  transition: none !important;
+  /* Force visibility for debugging */
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  /* Debug border */
+  /* border: 3px solid blue !important; */
 }
 
 /* Panels */
@@ -281,6 +326,18 @@ input[type="range"] {
   opacity: 0.7;
 }
 
+.palette__item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.palette__item.disabled:hover {
+  border-color: #333;
+  background: #1a1a1a;
+}
+
 .palette__item .label {
   font-weight: 600;
   color: #e5e7eb;
@@ -343,6 +400,7 @@ input[type="range"] {
 
 /* Main content area */
 .main {
+  grid-area: main !important;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -350,6 +408,8 @@ input[type="range"] {
   padding: 2rem;
   overflow: hidden;
   background: #0f172a;
+  /* Debug border */
+  /* border: 3px solid green !important; */
 }
 
 .board-wrapper {
@@ -363,6 +423,8 @@ input[type="range"] {
   margin-bottom: 1rem;
   width: 360px; /* 320px canvas + 38px padding + 2px border */
   box-sizing: border-box;
+  /* Debug border */
+  /* border: 3px solid orange !important; */
 }
 
 .board-wrapper canvas {
@@ -737,6 +799,16 @@ input[type="range"] {
     cursor: pointer;
   }
 
+  .palette__item.disabled {
+    cursor: not-allowed;
+  }
+
+  .palette__item.disabled:active {
+    cursor: not-allowed;
+    transform: none;
+    background: #1a1a1a;
+  }
+
   /* Header improvements for mobile */
   .app__header {
     padding: 0.75rem 1rem;
@@ -758,29 +830,41 @@ input[type="range"] {
 
   /* Mobile layout - sidebar overlay */
   .app__content {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
     position: relative;
+    /* Debug border */
+    /* border: 3px solid red !important; */
   }
 
   .sidebar {
-    position: fixed;
+    grid-area: none !important;
+    position: fixed !important;
     top: 0;
-    left: -100%;
-    width: 85vw;
-    max-width: 320px;
-    height: 100vh;
-    z-index: 50;
+    left: -100% !important;
+    width: 85vw !important;
+    max-width: 320px !important;
+    height: 100vh !important;
+    z-index: 50 !important;
     border-right: 1px solid #334155;
     border-bottom: none;
-    padding: 5rem 1rem 1rem;
-    transition: left 0.3s ease;
+    padding: 5rem 1rem 1rem !important;
+    transition: left 0.3s ease !important;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* Override desktop styles */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    background: #1e293b !important;
   }
 
   .sidebar.open {
-    left: 0;
+    left: 0 !important;
   }
 
   /* Mobile overlay */
@@ -805,23 +889,37 @@ input[type="range"] {
 
   /* Main content adjustments */
   .main {
+    grid-area: none !important;
     padding: 1rem;
-    justify-content: flex-start;
+    justify-content: center !important;
+    align-items: center !important;
     gap: 1rem;
+    /* Force full width and height for proper centering */
+    width: 100% !important;
+    height: 100% !important;
+    /* Debug border */
+    /* border: 3px solid yellow !important; */
   }
 
   /* Board sizing for mobile */
   .board-wrapper {
-    width: auto;
+    width: auto !important;
     max-width: 100%;
     padding: 1rem;
     margin-bottom: 0.75rem;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    /* Debug border */
+    /* border: 3px solid orange !important; */
   }
 
   .board-wrapper canvas {
     width: min(280px, 90vw);
     height: min(350px, calc(90vw * 1.25));
     max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
   }
 
   .board-wrapper canvas.mobile-placement-mode {
@@ -847,6 +945,10 @@ input[type="range"] {
     max-width: 100%;
     padding: 1rem;
     gap: 1rem;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    /* Debug border */
+    /* border: 3px solid purple !important; */
   }
 
   .playback-buttons {

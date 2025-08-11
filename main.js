@@ -60,6 +60,25 @@
   // Track delete mode state
   let isInDeleteMode = false;
 
+  // Function to check if a 2x2 piece already exists
+  function has2x2Piece() {
+    return model.pieces.some(piece => piece.type === '2x2');
+  }
+
+  // Function to update 2x2 palette item state
+  function update2x2PaletteState() {
+    const palette2x2 = document.querySelector('.palette__item[data-type="2x2"]');
+    if (palette2x2) {
+      if (has2x2Piece()) {
+        palette2x2.classList.add('disabled');
+        palette2x2.title = '2×2 (goal) - Only one allowed';
+      } else {
+        palette2x2.classList.remove('disabled');
+        palette2x2.title = '2×2 (goal)';
+      }
+    }
+  }
+
   const model = new BoardModel({ cols: 4, rows: 5, goalX: 1, goalY: 3 });
   const renderer = new BoardRenderer(canvas, model);
 
@@ -68,6 +87,21 @@
 
   // Initialize playback controls as disabled
   updatePlaybackButtons();
+
+  // Initialize 2x2 palette state
+  update2x2PaletteState();
+
+  // Ensure desktop layout is correct on load
+  if (window.innerWidth > 768 && sidebar) {
+    sidebar.classList.remove('open');
+    if (sidebarOverlay) {
+      sidebarOverlay.classList.remove('visible');
+    }
+    if (menuToggle) {
+      menuToggle.classList.remove('active');
+    }
+    document.body.style.overflow = '';
+  }
 
   // Function to update save button state
   function updateSaveButton() {
@@ -87,10 +121,13 @@
   }
 
   function openMobileMenu() {
-    sidebar.classList.add('open');
-    sidebarOverlay.classList.add('visible');
-    menuToggle.classList.add('active');
-    document.body.style.overflow = 'hidden'; // Prevent body scroll when menu is open
+    // Only allow mobile menu behavior on mobile screens
+    if (window.innerWidth <= 768) {
+      sidebar.classList.add('open');
+      sidebarOverlay.classList.add('visible');
+      menuToggle.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent body scroll when menu is open
+    }
   }
 
   function closeMobileMenu() {
@@ -154,6 +191,11 @@
         const paletteItem = e.target.closest('.palette__item');
         const pieceType = paletteItem.dataset.type;
         if (pieceType && window.innerWidth <= 768) {
+          // Prevent placing 2x2 if one already exists
+          if (pieceType === '2x2' && has2x2Piece()) {
+            setStatus('Only one 2×2 piece allowed');
+            return;
+          }
           enterMobilePiecePlacement(pieceType);
           return;
         }
@@ -173,6 +215,10 @@
     if (window.innerWidth > 768) {
       closeMobileMenu();
       exitMobilePiecePlacement();
+      // Ensure sidebar is properly reset for desktop
+      if (sidebar) {
+        sidebar.classList.remove('open');
+      }
     }
   });
 
@@ -290,19 +336,26 @@ speedRange.addEventListener('input', () => {
         const piece = model.createPiece(mobilePiecePlacementMode.type,
                                        mobilePiecePlacementMode.ghost.x,
                                        mobilePiecePlacementMode.ghost.y);
-        const ok = model.tryAddPiece(piece);
-        if (ok) {
-          setStatus(`Added ${piece.type} as ${piece.id}`);
-          model.selectedId = piece.id;
-          btnDelete.disabled = false;
-          hasUnsavedChanges = true;
-          updateSaveButton();
-          // Reset puzzle solved state when pieces are added
-          puzzleIsSolved = false;
-          animationPlayer = null;
-          updatePlaybackButtons();
+        // Check if trying to place a 2x2 when one already exists
+        if (mobilePiecePlacementMode.type === '2x2' && has2x2Piece()) {
+          setStatus('Only one 2×2 piece allowed');
         } else {
-          setStatus('Cannot place piece here');
+          const ok = model.tryAddPiece(piece);
+          if (ok) {
+            setStatus(`Added ${piece.type} as ${piece.id}`);
+            model.selectedId = piece.id;
+            btnDelete.disabled = false;
+            hasUnsavedChanges = true;
+            updateSaveButton();
+            // Reset puzzle solved state when pieces are added
+            puzzleIsSolved = false;
+            animationPlayer = null;
+            updatePlaybackButtons();
+            // Update 2x2 palette state
+            update2x2PaletteState();
+          } else {
+            setStatus('Cannot place piece here');
+          }
         }
       } else {
         setStatus('Cannot place piece here');
@@ -413,6 +466,8 @@ speedRange.addEventListener('input', () => {
         updatePlaybackButtons();
         model.selectedId = null;
         btnDelete.disabled = true;
+        // Update 2x2 palette state
+        update2x2PaletteState();
       }
     } else {
       // Normal move logic
@@ -454,6 +509,13 @@ speedRange.addEventListener('input', () => {
       e.preventDefault();
       const type = el.dataset.type;
       if (!type) return;
+
+      // Prevent dragging 2x2 if one already exists
+      if (type === '2x2' && has2x2Piece()) {
+        setStatus('Only one 2×2 piece allowed');
+        return;
+      }
+
       dragType = type;
       paletteDragging = true;
       el.classList.add('dragging');
@@ -502,18 +564,25 @@ speedRange.addEventListener('input', () => {
           if (inside) {
             const px = ev.clientX - rectc.left; const py = ev.clientY - rectc.top;
             const grid = renderer.pixelToGrid(px, py);
-            const piece = model.createPiece(dragType, grid.x, grid.y);
-            const ok = model.tryAddPiece(piece);
-            if (!ok) setStatus('Cannot place piece here');
-            else {
-              setStatus(`Added ${piece.type} as ${piece.id}`);
-              model.selectedId = piece.id; btnDelete.disabled = false;
-              hasUnsavedChanges = true;
-              updateSaveButton();
-              // Reset puzzle solved state when pieces are added
-              puzzleIsSolved = false;
-              animationPlayer = null;
-              updatePlaybackButtons();
+            // Check if trying to place a 2x2 when one already exists
+            if (dragType === '2x2' && has2x2Piece()) {
+              setStatus('Only one 2×2 piece allowed');
+            } else {
+              const piece = model.createPiece(dragType, grid.x, grid.y);
+              const ok = model.tryAddPiece(piece);
+              if (!ok) setStatus('Cannot place piece here');
+              else {
+                setStatus(`Added ${piece.type} as ${piece.id}`);
+                model.selectedId = piece.id; btnDelete.disabled = false;
+                hasUnsavedChanges = true;
+                updateSaveButton();
+                // Reset puzzle solved state when pieces are added
+                puzzleIsSolved = false;
+                animationPlayer = null;
+                updatePlaybackButtons();
+                // Update 2x2 palette state
+                update2x2PaletteState();
+              }
             }
           }
         }
@@ -548,6 +617,8 @@ speedRange.addEventListener('input', () => {
       puzzleIsSolved = false;
       animationPlayer = null;
       updatePlaybackButtons();
+      // Update 2x2 palette state
+      update2x2PaletteState();
     }
     model.selectedId = null;
     btnDelete.disabled = true;
@@ -567,6 +638,8 @@ speedRange.addEventListener('input', () => {
     // Disable playback controls when clearing
     animationPlayer = null;
     updatePlaybackButtons();
+    // Update 2x2 palette state
+    update2x2PaletteState();
     renderer.draw(model.selectedId);
   });
 
@@ -580,6 +653,8 @@ speedRange.addEventListener('input', () => {
     // Disable playback controls when resetting
     animationPlayer = null;
     updatePlaybackButtons();
+    // Update 2x2 palette state
+    update2x2PaletteState();
     renderer.draw(model.selectedId);
   });
 
@@ -612,6 +687,8 @@ speedRange.addEventListener('input', () => {
     // Disable playback controls when loading a new state
     animationPlayer = null;
     updatePlaybackButtons();
+    // Update 2x2 palette state
+    update2x2PaletteState();
     renderer.draw(model.selectedId);
   }
 
