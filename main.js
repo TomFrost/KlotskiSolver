@@ -916,6 +916,12 @@ speedRange.addEventListener('input', () => {
   btnPlayPause.addEventListener('click', async () => {
     // If no animation player and puzzle not solved, trigger solve
     if (!animationPlayer && !puzzleIsSolved) {
+      // Deselect any currently selected piece before solving
+      if (model.selectedId) {
+        model.selectedId = null;
+        btnDelete.disabled = true;
+        renderer.draw(model.selectedId);
+      }
       await solvePuzzle();
       return;
     }
