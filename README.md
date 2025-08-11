@@ -2,6 +2,8 @@
 
 An interactive, web-based Klotski puzzle solver with a beautiful UI and replacable solving algorithm.
 
+[Try it here](https://tomfrost.github.io/KlotskiSolver/) or [Test with a pre-built puzzle](https://tomfrost.github.io/KlotskiSolver/#eyJjb2xzIjo0LCJyb3dzIjo1LCJnb2FsIjp7IngiOjEsInkiOjMsInciOjIsImgiOjJ9LCJwaWVjZXMiOlt7InR5cGUiOiIyeDIiLCJ4IjoxLCJ5IjowLCJ3IjoyLCJoIjoyLCJpZCI6IkEifSx7InR5cGUiOiIyeDEiLCJ4IjoxLCJ5IjoyLCJ3IjoyLCJoIjoxLCJpZCI6IkIifSx7InR5cGUiOiIxeDIiLCJ4IjowLCJ5IjowLCJ3IjoxLCJoIjoyLCJpZCI6IkMifSx7InR5cGUiOiIxeDIiLCJ4IjozLCJ5IjowLCJ3IjoxLCJoIjoyLCJpZCI6IkQifSx7InR5cGUiOiIxeDIiLCJ4IjowLCJ5IjozLCJ3IjoxLCJoIjoyLCJpZCI6IkUifSx7InR5cGUiOiIxeDIiLCJ4IjozLCJ5IjozLCJ3IjoxLCJoIjoyLCJpZCI6IkYifSx7InR5cGUiOiIxeDEiLCJ4IjoxLCJ5IjozLCJ3IjoxLCJoIjoxLCJpZCI6IkcifSx7InR5cGUiOiIxeDEiLCJ4IjoyLCJ5IjozLCJ3IjoxLCJoIjoxLCJpZCI6IkgifSx7InR5cGUiOiIxeDEiLCJ4IjoxLCJ5Ijo0LCJ3IjoxLCJoIjoxLCJpZCI6IkkifSx7InR5cGUiOiIxeDEiLCJ4IjoyLCJ5Ijo0LCJ3IjoxLCJoIjoxLCJpZCI6IkoifV19)
+
 ## 🎯 What is Klotski?
 
 Klotski is a classic sliding block puzzle where the goal is to move a large 2×2 block to a designated exit position by sliding other pieces around the board. The challenge lies in the limited space and the fact that pieces can only slide—they cannot be lifted or rotated.
