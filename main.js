@@ -165,10 +165,12 @@
   }
 
   function exitMobilePiecePlacement() {
-    mobilePiecePlacementMode = null;
-    setStatus('');
-    canvas.classList.remove('mobile-placement-mode');
-    renderer.draw(model.selectedId); // Clear any ghost pieces
+    if (mobilePiecePlacementMode) {
+      mobilePiecePlacementMode = null;
+      setStatus('');
+      canvas.classList.remove('mobile-placement-mode');
+      renderer.draw(model.selectedId); // Clear any ghost pieces
+    }
   }
 
   function updateMobileGhost(event) {

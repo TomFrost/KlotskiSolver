@@ -453,7 +453,6 @@ input[type="range"] {
   border-radius: 1rem;
   padding: 1.5rem 1.1875rem; /* 24px top/bottom, 19px left/right */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  margin-bottom: 1rem;
   width: 360px; /* 320px canvas + 38px padding + 2px border */
   box-sizing: border-box;
   /* Debug border */
@@ -469,7 +468,7 @@ input[type="range"] {
 }
 
 .status {
-  margin-top: 1rem;
+  margin: 1rem 0;
   min-height: 1.5rem;
   font-size: 0.875rem;
   color: #94a3b8;
