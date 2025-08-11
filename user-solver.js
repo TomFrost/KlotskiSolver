@@ -257,8 +257,12 @@ function solveGame(game) {
         dir: DIRECTION_MAP[currentState.lastMove.dir]
       }
       // If the move is a continuation, add the count
-      if (moves.length && moves[moves.length - 1].id === move.id && moves[moves.length - 1].dir === move.dir) {
-        moves[moves.length - 1].count = moves[moves.length - 1].count ? moves[moves.length - 1].count + 1 : 2;
+      if (moves.length &&
+          moves[moves.length - 1].id === move.id &&
+          moves[moves.length - 1].dir === move.dir) {
+        moves[moves.length - 1].count = moves[moves.length - 1].count ?
+          moves[moves.length - 1].count + 1 :
+          2;
       } else {
         moves.push(move);
       }

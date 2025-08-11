@@ -199,7 +199,7 @@
       return false;
     }
 
-                                                                // Step backward one move
+    // Step backward one move
     stepBackward() {
       if (this.currentStep <= 0 && this.currentSubStep <= 0) return false;
 
@@ -366,7 +366,7 @@
       if (!ok) throw new Error(`Illegal move when committing animation: {id:${pieceId}, dx:${dx}, dy:${dy}}`);
     }
 
-        // Show status message for current step position
+    // Show status message for current step position
     showCurrentStepStatus() {
       if (this.currentStep === 0 && this.currentSubStep === 0) {
         this.onStatus?.('Ready to solve');

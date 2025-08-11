@@ -1,7 +1,7 @@
 (function(){
   const { BoardModel } = window.Klotski;
   const { BoardRenderer } = window.Klotski;
-  const { animateMoves, AnimationPlayer } = window.Klotski;
+  const { AnimationPlayer } = window.Klotski;
   const { clamp } = window.Klotski.utils;
 
   const canvas = document.getElementById('board');
@@ -449,8 +449,8 @@ speedRange.addEventListener('input', () => {
     const targetX = dragState.originX + dx;
     const targetY = dragState.originY + dy;
     const wouldBeOutOfBounds = targetX < 0 || targetY < 0 ||
-                               targetX + piece.w > model.cols ||
-                               targetY + piece.h > model.rows;
+      targetX + piece.w > model.cols ||
+      targetY + piece.h > model.rows;
 
     if (isOutsideCanvas || wouldBeOutOfBounds) {
       // Delete the piece
@@ -596,8 +596,6 @@ speedRange.addEventListener('input', () => {
       window.addEventListener('pointerup', onUp, { once: true });
     });
   });
-
-  // Remove old HTML5 drag listeners if any
 
   // Remove any residual HTML5 drag handlers
   ['dragover','dragleave','drop'].forEach(type => {

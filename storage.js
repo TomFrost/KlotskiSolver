@@ -52,5 +52,13 @@
   }
 
   window.Klotski = window.Klotski || {};
-  window.Klotski.Storage = { savePuzzle, deletePuzzle, getPuzzle, listNames, setDefaultName, getDefaultName, clearDefaultName };
+  window.Klotski.Storage = {
+    savePuzzle,
+    deletePuzzle,
+    getPuzzle,
+    listNames,
+    setDefaultName,
+    getDefaultName,
+    clearDefaultName,
+  };
 })();

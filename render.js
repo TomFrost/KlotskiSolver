@@ -75,7 +75,7 @@
       ctx.globalAlpha = 1;
 
       // Draw pieces
-      this.model.pieces.forEach((p, idx) => {
+      this.model.pieces.forEach((p) => {
         if (animation && animation.id === p.id) {
           return; // skip default draw; will draw animated at interpolated position below
         }
@@ -85,7 +85,7 @@
         const h = p.h * cellSize;
 
         const fill = this.colorByType[p.type] || '#e5e7eb';
-      ctx.fillStyle = fill;
+        ctx.fillStyle = fill;
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--piece-border') || '#111827';
         ctx.lineWidth = 2;
         ctx.beginPath();
