@@ -152,6 +152,39 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* GitHub link styling */
+.github-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #475569;
+  background: #334155;
+  color: #e5e7eb;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+}
+
+.github-link:hover {
+  background: #475569;
+  border-color: #64748b;
+  color: #f8fafc;
+}
+
+.github-link:active {
+  transform: scale(0.98);
+}
+
+.github-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* Main content layout */
 .app__content {
   display: grid !important;
@@ -826,6 +859,17 @@ input[type="range"] {
     padding: 0.375rem 0.75rem;
     font-size: 0.8125rem;
     min-height: 2rem;
+  }
+
+  .github-link {
+    padding: 0.375rem 0.75rem;
+    min-height: 2rem;
+    min-width: 2rem;
+  }
+
+  .github-icon {
+    width: 18px;
+    height: 18px;
   }
 
   /* Mobile layout - sidebar overlay */
